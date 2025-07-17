@@ -16,6 +16,7 @@ interface NavigationProps {
   setActiveTab: (tab: string) => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  hideBottomBar?: boolean;
 }
 
 const Navigation = ({
@@ -23,8 +24,10 @@ const Navigation = ({
   setActiveTab,
   darkMode,
   setDarkMode,
+  hideBottomBar,
 }: NavigationProps) => {
   const location = useLocation();
+  const isChatPage = location.pathname.startsWith("/chat/");
   return (
     <>
       {/* Top nav: only on md+ */}
@@ -115,79 +118,83 @@ const Navigation = ({
           </div>
         </div>
       </nav>
-      {/* Bottom nav: only on mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 border-t shadow-lg md:hidden z-50">
-        <div className="flex justify-around items-center h-16 text-gray-700 text-2xl">
-          <Link
-            to="/"
-            className={`flex flex-col items-center flex-1 py-2 ${
-              location.pathname === "/"
-                ? "text-blue-600"
-                : "hover:text-blue-500"
-            }`}
-          >
-            <Home className="w-7 h-7 mb-1" />
-            <span className="text-xs">Home</span>
-          </Link>
+      {/* Bottom nav: only on mobile, not on chat page */}
+      {!hideBottomBar && !isChatPage && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 border-t shadow-lg md:hidden z-50">
+          <div className="flex justify-around items-center h-16 text-gray-700 text-2xl">
+            <Link
+              to="/"
+              className={`flex flex-col items-center flex-1 py-2 ${
+                location.pathname === "/"
+                  ? "text-blue-600"
+                  : "hover:text-blue-500"
+              }`}
+            >
+              <Home className="w-7 h-7 mb-1" />
+              <span className="text-xs">Home</span>
+            </Link>
+            <button
+              onClick={() => setActiveTab("explore")}
+              className={`flex flex-col items-center flex-1 py-2 ${
+                activeTab === "explore"
+                  ? "text-blue-600"
+                  : "hover:text-blue-500"
+              }`}
+            >
+              <Compass className="w-7 h-7 mb-1" />
+              <span className="text-xs">Explore</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`flex flex-col items-center flex-1 py-2 relative ${
+                activeTab === "notifications"
+                  ? "text-blue-600"
+                  : "hover:text-blue-500"
+              }`}
+            >
+              <Bell className="w-7 h-7 mb-1" />
+              <span className="text-xs">Alerts</span>
+              <span className="absolute top-1 right-4 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                3
+              </span>
+            </button>
+            <Link
+              to="/inbox"
+              className={`flex flex-col items-center flex-1 py-2 ${
+                location.pathname === "/inbox"
+                  ? "text-blue-600"
+                  : "hover:text-blue-500"
+              }`}
+            >
+              <Mail className="w-7 h-7 mb-1" />
+              <span className="text-xs">Inbox</span>
+            </Link>
+            <Link
+              to="/profile"
+              className={`flex flex-col items-center flex-1 py-2 ${
+                location.pathname === "/profile"
+                  ? "text-blue-600"
+                  : "hover:text-blue-500"
+              }`}
+            >
+              <User className="w-7 h-7 mb-1" />
+              <span className="text-xs">Me</span>
+            </Link>
+          </div>
           <button
-            onClick={() => setActiveTab("explore")}
-            className={`flex flex-col items-center flex-1 py-2 ${
-              activeTab === "explore" ? "text-blue-600" : "hover:text-blue-500"
-            }`}
+            onClick={() => setDarkMode(!darkMode)}
+            className="absolute right-4 top-2 p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-all duration-200"
+            style={{ zIndex: 10 }}
+            aria-label="Toggle dark mode"
           >
-            <Compass className="w-7 h-7 mb-1" />
-            <span className="text-xs">Explore</span>
+            {darkMode ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
           </button>
-          <button
-            onClick={() => setActiveTab("notifications")}
-            className={`flex flex-col items-center flex-1 py-2 relative ${
-              activeTab === "notifications"
-                ? "text-blue-600"
-                : "hover:text-blue-500"
-            }`}
-          >
-            <Bell className="w-7 h-7 mb-1" />
-            <span className="text-xs">Alerts</span>
-            <span className="absolute top-1 right-4 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
-              3
-            </span>
-          </button>
-          <Link
-            to="/inbox"
-            className={`flex flex-col items-center flex-1 py-2 ${
-              location.pathname === "/inbox"
-                ? "text-blue-600"
-                : "hover:text-blue-500"
-            }`}
-          >
-            <Mail className="w-7 h-7 mb-1" />
-            <span className="text-xs">Inbox</span>
-          </Link>
-          <Link
-            to="/profile"
-            className={`flex flex-col items-center flex-1 py-2 ${
-              location.pathname === "/profile"
-                ? "text-blue-600"
-                : "hover:text-blue-500"
-            }`}
-          >
-            <User className="w-7 h-7 mb-1" />
-            <span className="text-xs">Me</span>
-          </Link>
-        </div>
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="absolute right-4 top-2 p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-all duration-200"
-          style={{ zIndex: 10 }}
-          aria-label="Toggle dark mode"
-        >
-          {darkMode ? (
-            <Sun className="w-5 h-5" />
-          ) : (
-            <Moon className="w-5 h-5" />
-          )}
-        </button>
-      </nav>
+        </nav>
+      )}
     </>
   );
 };
