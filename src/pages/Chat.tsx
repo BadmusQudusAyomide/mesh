@@ -33,7 +33,9 @@ const initialMessages = [
 function Chat() {
   const { username } = useParams();
   const navigate = useNavigate();
-  const user = users[username || "aishabello"] || users["aishabello"];
+  const user =
+    users[(username as keyof typeof users) || "aishabello"] ||
+    users["aishabello"];
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const [activeTab, setActiveTab] = useState("messages");
@@ -106,7 +108,10 @@ function Chat() {
           ))}
         </div>
         {/* Chat Input: fixed at bottom on mobile, static on desktop */}
-        <form onSubmit={handleSend} className="md:static md:mt-4 md:mb-0 fixed bottom-0 left-0 right-0 bg-white/90 md:bg-transparent px-4 py-3 flex items-center gap-2 z-40 md:rounded-none rounded-t-2xl shadow md:shadow-none md:max-w-2xl md:mx-auto">
+        <form
+          onSubmit={handleSend}
+          className="md:static md:mt-4 md:mb-0 fixed bottom-0 left-0 right-0 bg-white/90 md:bg-transparent px-4 py-3 flex items-center gap-2 z-40 md:rounded-none rounded-t-2xl shadow md:shadow-none md:max-w-2xl md:mx-auto"
+        >
           <input
             type="text"
             value={input}

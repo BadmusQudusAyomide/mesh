@@ -1,14 +1,5 @@
-import {
-  Users,
-  Verified,
-  Eye,
-  Sparkles,
-  Zap,
-  Target,
-  BarChart3,
-  Activity,
-  Clock,
-} from "lucide-react";
+import React from "react";
+import { Users, Verified, Eye, Sparkles, Clock } from "lucide-react";
 
 interface User {
   name: string;
@@ -28,7 +19,7 @@ interface SidebarRightProps {
   whoToFollow: User[];
   liveEvents: Event[];
   aiInsights: {
-    icon: JSX.Element;
+    icon: React.ReactNode;
     title: string;
     value: string;
     description: string;
