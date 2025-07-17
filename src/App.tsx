@@ -42,8 +42,8 @@ import "./App.css";
 const initialPosts = [
   {
     id: 1,
-    user: "Alex Chen",
-    username: "alexchen",
+    user: "Chinedu Okafor",
+    username: "chineduokafor",
     avatar: "https://randomuser.me/api/portraits/men/32.jpg",
     content:
       "Just shipped a new feature that uses AI to optimize user experiences in real-time. The future is now! 🚀✨",
@@ -63,8 +63,8 @@ const initialPosts = [
   },
   {
     id: 2,
-    user: "Maya Rodriguez",
-    username: "mayarod",
+    user: "Aisha Bello",
+    username: "aishabello",
     avatar: "https://randomuser.me/api/portraits/women/44.jpg",
     content:
       "Breaking: New study shows that decentralized networks are 40% more efficient than traditional systems. Game changer! 🌐⚡",
@@ -84,8 +84,8 @@ const initialPosts = [
   },
   {
     id: 3,
-    user: "David Kim",
-    username: "davekim",
+    user: "Emeka Umeh",
+    username: "emekaumeh",
     avatar: "https://randomuser.me/api/portraits/men/15.jpg",
     content:
       "Mind-blowing sunset from my rooftop garden. Nature never fails to inspire! 🌅🌱",
@@ -105,8 +105,8 @@ const initialPosts = [
   },
   {
     id: 4,
-    user: "Zoe Mitchell",
-    username: "zoemitch",
+    user: "Ayomide Balogun",
+    username: "ayomidebalogun",
     avatar: "https://randomuser.me/api/portraits/women/28.jpg",
     content:
       "Excited to announce our new sustainable tech initiative! We're building the future while protecting our planet 🌍💚",
@@ -386,7 +386,7 @@ function App() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-gray-800">
-                    Alex Johnson
+                    Badmus
                   </h3>
                   <p className="text-gray-600 text-sm">@alexj</p>
                   <div className="flex items-center space-x-1 mt-1">
