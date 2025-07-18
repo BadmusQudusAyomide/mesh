@@ -327,6 +327,7 @@ function Home() {
         setDarkMode={setDarkMode}
       />
       <div className="md:pt-24 pb-8 px-4 max-w-7xl mx-auto">
+        <Stories stories={stories} />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="hidden md:block">
             <SidebarLeft trendingTopics={trendingTopics} user={user} />
@@ -379,7 +380,6 @@ function Home() {
                 </div>
               </div>
             </div>
-            <Stories stories={stories} />
             {/* Desktop: show create post prompt after stories */}
             <div className="hidden md:block">
               <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">

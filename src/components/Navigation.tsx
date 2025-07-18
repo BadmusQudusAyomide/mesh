@@ -120,7 +120,13 @@ const Navigation = ({
       </nav>
       {/* Bottom nav: only on mobile, not on chat page */}
       {!hideBottomBar && !isChatPage && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 border-t shadow-lg md:hidden z-50">
+        <nav
+          className="fixed bottom-0 left-0 right-0 md:hidden z-50 border-t border-white/30 bg-white/60 backdrop-blur-xl rounded-t-2xl shadow-2xl"
+          style={{
+            WebkitBackdropFilter: "blur(24px)",
+            backdropFilter: "blur(24px)",
+          }}
+        >
           <div className="flex justify-around items-center h-16 text-gray-700 text-2xl">
             <Link
               to="/"

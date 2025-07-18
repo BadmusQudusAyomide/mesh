@@ -23,7 +23,7 @@ const Stories = ({ stories }: StoriesProps) => (
       {stories.map((story) => (
         <div key={story.id} className="flex-shrink-0 text-center">
           <div
-            className={`relative w-16 h-16 rounded-2xl overflow-hidden ${
+            className={`relative w-16 h-16 rounded-full overflow-hidden ${
               story.isAdd
                 ? "bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
                 : story.hasStory && !story.isViewed
@@ -37,7 +37,7 @@ const Stories = ({ stories }: StoriesProps) => (
               <img
                 src={story.avatar}
                 alt={story.user}
-                className="w-full h-full object-cover rounded-2xl"
+                className="w-full h-full object-cover rounded-full"
               />
             )}
           </div>
