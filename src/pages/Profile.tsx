@@ -6,7 +6,6 @@ import { apiService } from "../lib/api";
 import type { User } from "../types";
 import {
   Crown,
-  Settings,
   MapPin,
   Calendar,
   ExternalLink,
@@ -187,8 +186,20 @@ const Post = ({
   </div>
 );
 
-// Add EditProfile overlay component inside Profile
-function EditProfile({ user, onClose, onSave }) {
+interface EditProfileProps {
+  user: User;
+  onClose: () => void;
+  onSave: (data: {
+    fullName: string;
+    bio: string;
+    website: string;
+    location: string;
+    avatar: string;
+    cover: string;
+  }) => Promise<void>;
+}
+
+function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const [fullName, setFullName] = useState(user.fullName || "");
   const [bio, setBio] = useState(user.bio || "");
   const [website, setWebsite] = useState(user.website || "");
@@ -196,14 +207,17 @@ function EditProfile({ user, onClose, onSave }) {
   const [avatar, setAvatar] = useState(user.avatar || "");
   const [cover, setCover] = useState(user.cover || "");
   const [loading, setLoading] = useState(false);
-  const avatarInputRef = useRef(null);
-  const coverInputRef = useRef(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Cloudinary unsigned upload preset (replace with your preset if needed)
   const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`;
   const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
 
-  const handleImageUpload = async (e, type) => {
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "avatar" | "cover"
+  ) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const formData = new FormData();
@@ -225,7 +239,7 @@ function EditProfile({ user, onClose, onSave }) {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -252,7 +266,13 @@ function EditProfile({ user, onClose, onSave }) {
         {/* Cover Image */}
         <div className="relative h-40 rounded-2xl overflow-hidden mb-8">
           <img src={cover} alt="Cover" className="w-full h-full object-cover" />
-          <button type="button" onClick={() => coverInputRef.current.click()} className="absolute top-4 right-4 p-2 bg-black/30 rounded-lg text-white hover:bg-black/40 transition-all">
+          <button
+            type="button"
+            onClick={() => {
+              if (coverInputRef.current) coverInputRef.current.click();
+            }}
+            className="absolute top-4 right-4 p-2 bg-black/30 rounded-lg text-white hover:bg-black/40 transition-all"
+          >
             <Camera className="w-5 h-5" />
           </button>
           <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={e => handleImageUpload(e, "cover")}/>
@@ -261,7 +281,13 @@ function EditProfile({ user, onClose, onSave }) {
         <div className="flex justify-center -mt-20 mb-4">
           <div className="relative">
             <img src={avatar} alt="Avatar" className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl" />
-            <button type="button" onClick={() => avatarInputRef.current.click()} className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (avatarInputRef.current) avatarInputRef.current.click();
+              }}
+              className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center"
+            >
               <Edit3 className="w-4 h-4" />
             </button>
             <input type="file" accept="image/*" ref={avatarInputRef} className="hidden" onChange={e => handleImageUpload(e, "avatar")}/>
@@ -661,7 +687,6 @@ function Profile() {
           onClose={() => setShowEdit(false)}
           onSave={async (data) => {
             await apiService.updateProfile(data);
-            // Optionally, refetch profile data here
             setProfileUser({ ...profileUser, ...data });
           }}
         />
