@@ -15,6 +15,10 @@ const handleResponse = async (response: Response) => {
   const data = await response.json();
   
   if (!response.ok) {
+    // For auth errors, provide more specific error messages
+    if (response.status === 401) {
+      throw new Error(data.error || 'Authentication failed');
+    }
     throw new Error(data.error || 'Something went wrong');
   }
   

@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-} from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { apiService } from "../lib/api";
 import type { User } from "../types";
@@ -46,13 +41,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         const token = apiService.getToken();
-        if (token) {
+        if (token && token.trim() !== "") {
           const { user } = await apiService.getCurrentUser();
           setUser(user);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        apiService.clearToken();
+        // Only clear token if it's an auth error (401, 403)
+        if (
+          error instanceof Error &&
+          (error.message.includes("token") ||
+            error.message.includes("Authentication failed"))
+        ) {
+          apiService.clearToken();
+        }
       } finally {
         setIsLoading(false);
       }

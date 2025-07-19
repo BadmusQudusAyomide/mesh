@@ -268,7 +268,7 @@ function Profile() {
   };
 
   const tabs = [
-    { id: "posts", label: "Posts", count: profileUser.postCount || 0 },
+    { id: "posts", label: "Posts", count: profileUser?.postCount || 0 },
     { id: "media", label: "Media", count: 0 }, // TODO: Implement media count
     { id: "likes", label: "Likes", count: 0 }, // TODO: Implement likes count
   ];
