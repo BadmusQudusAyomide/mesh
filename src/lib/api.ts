@@ -7,8 +7,7 @@ import type {
   ProfileUpdateResponse, 
   LogoutResponse 
 } from '../types';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config';
 
 // Helper function to handle API responses
 const handleResponse = async (response: Response) => {
