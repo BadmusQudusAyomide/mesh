@@ -6,7 +6,6 @@ import Stories from "../components/Stories";
 import CreatePost from "../components/CreatePost";
 import PostsFeed from "../components/PostsFeed";
 import { Zap, Target, BarChart3 } from "lucide-react";
-import ApiTest from "../components/ApiTest";
 import { useAuth } from "../contexts/AuthContext";
 import "../App.css";
 
@@ -236,7 +235,6 @@ function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [showApiTest, setShowApiTest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePostSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -334,67 +332,31 @@ function Home() {
       />
       {/* App Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Mesh
-              </h1>
-              {user && (
-                <div className="flex items-center space-x-2 ml-4">
-                  <img
-                    src={user.avatar}
-                    alt={user.fullName}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900">{user.fullName}</p>
-                    <p className="text-gray-500">@{user.username}</p>
-                  </div>
-                </div>
-              )}
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <span className="text-white font-bold text-lg">M</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowApiTest(!showApiTest)}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Mesh
+            </h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+              <svg
+                className="w-6 h-6 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {showApiTest ? "Hide" : "Show"} API Test
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                <svg
-                  className="w-6 h-6 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-5 5v-5z"
-                  />
-                </svg>
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                <svg
-                  className="w-6 h-6 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </button>
-            </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -420,11 +382,11 @@ function Home() {
           </div>
           <div className="lg:col-span-2 space-y-4">
             {/* API Test Section - Only show for testing */}
-            {showApiTest && (
+            {/* {showApiTest && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                 <ApiTest />
               </div>
-            )}
+            )} */}
 
             <Stories
               stories={stories}

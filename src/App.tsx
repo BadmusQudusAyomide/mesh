@@ -14,6 +14,7 @@ import { ToastProvider } from "./components/ui/toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import SuccessPage from "./pages/SuccessPage";
+import ConnectionTest from "./pages/ConnectionTest";
 import "./App.css";
 
 // Sample content data for preloading
@@ -52,15 +53,15 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-    <Router>
-      {/* Preloading Progress Indicator */}
-      {isPreloading && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-2 text-sm">
-          Loading content... {Math.round(preloadProgress)}%
-        </div>
-      )}
+        <Router>
+          {/* Preloading Progress Indicator */}
+          {isPreloading && (
+            <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-2 text-sm">
+              Loading content... {Math.round(preloadProgress)}%
+            </div>
+          )}
 
-      <Routes>
+          <Routes>
             <Route
               path="/"
               element={
@@ -134,8 +135,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
-      </Routes>
-    </Router>
+            <Route
+              path="/connection"
+              element={
+                <ProtectedRoute>
+                  <ConnectionTest />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
       </ToastProvider>
     </AuthProvider>
   );
