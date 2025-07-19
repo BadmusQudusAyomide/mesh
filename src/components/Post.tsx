@@ -11,27 +11,39 @@ import {
   VolumeX,
   Trash2,
   Edit3,
-  Send,
   Smile,
-  Image,
-  X,
   ArrowLeft,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
+interface Post {
+  id: number;
+  user: string;
+  username: string;
+  avatar: string;
+  content: string;
+  time: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  isVerified: boolean;
+  engagement: number;
+  trending: boolean;
+  category: string;
+}
+
 interface PostProps {
-  post: any;
+  post: Post;
   formatNumber: (num: number) => string;
   handleLike: (postId: number) => void;
   handleBookmark: (postId: number) => void;
 }
 
-const Post = ({
-  post,
-  formatNumber,
-  handleLike,
-  handleBookmark,
-}: PostProps) => {
+const Post = ({ post, formatNumber, handleLike }: PostProps) => {
   // State management
   const [comments, setComments] = useState([
     {
