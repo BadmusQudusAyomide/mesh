@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { useAuth } from "../contexts/AuthContext";
@@ -18,6 +18,7 @@ import {
   Camera,
   Edit3,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 
 // Default cover image
@@ -186,6 +187,113 @@ const Post = ({
   </div>
 );
 
+// Add EditProfile overlay component inside Profile
+function EditProfile({ user, onClose, onSave }) {
+  const [fullName, setFullName] = useState(user.fullName || "");
+  const [bio, setBio] = useState(user.bio || "");
+  const [website, setWebsite] = useState(user.website || "");
+  const [location, setLocation] = useState(user.location || "");
+  const [avatar, setAvatar] = useState(user.avatar || "");
+  const [cover, setCover] = useState(user.cover || "");
+  const [loading, setLoading] = useState(false);
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+
+  // Cloudinary unsigned upload preset (replace with your preset if needed)
+  const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`;
+  const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
+
+  const handleImageUpload = async (e, type) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+    setLoading(true);
+    try {
+      const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (type === "avatar") setAvatar(data.secure_url);
+      if (type === "cover") setCover(data.secure_url);
+    } catch (err) {
+      alert("Image upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave({ fullName, bio, website, location, avatar, cover });
+      onClose();
+    } catch (err) {
+      alert("Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
+        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <h3 className="font-semibold text-gray-900">Edit Profile</h3>
+      </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* Cover Image */}
+        <div className="relative h-40 rounded-2xl overflow-hidden mb-8">
+          <img src={cover} alt="Cover" className="w-full h-full object-cover" />
+          <button type="button" onClick={() => coverInputRef.current.click()} className="absolute top-4 right-4 p-2 bg-black/30 rounded-lg text-white hover:bg-black/40 transition-all">
+            <Camera className="w-5 h-5" />
+          </button>
+          <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={e => handleImageUpload(e, "cover")}/>
+        </div>
+        {/* Avatar */}
+        <div className="flex justify-center -mt-20 mb-4">
+          <div className="relative">
+            <img src={avatar} alt="Avatar" className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl" />
+            <button type="button" onClick={() => avatarInputRef.current.click()} className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center">
+              <Edit3 className="w-4 h-4" />
+            </button>
+            <input type="file" accept="image/*" ref={avatarInputRef} className="hidden" onChange={e => handleImageUpload(e, "avatar")}/>
+          </div>
+        </div>
+        {/* Fields */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <input type="text" className="w-full border rounded-lg px-3 py-2 mt-1" value={fullName} onChange={e => setFullName(e.target.value)} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Bio</label>
+            <textarea className="w-full border rounded-lg px-3 py-2 mt-1" value={bio} onChange={e => setBio(e.target.value)} maxLength={200} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Website</label>
+            <input type="url" className="w-full border rounded-lg px-3 py-2 mt-1" value={website} onChange={e => setWebsite(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Location</label>
+            <input type="text" className="w-full border rounded-lg px-3 py-2 mt-1" value={location} onChange={e => setLocation(e.target.value)} />
+          </div>
+        </div>
+        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transition-all">
+          {loading ? "Saving..." : "Save Changes"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function Profile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
@@ -198,6 +306,7 @@ function Profile() {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   // Fetch profile data
   useEffect(() => {
@@ -334,9 +443,12 @@ function Profile() {
               </p>
             </div>
           </div>
-          <button className="p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all">
-            <Settings className="w-6 h-6" />
-          </button>
+          {/* Show Edit Profile button for current user */}
+          {currentUser && currentUser._id === profileUser._id && (
+            <button onClick={() => setShowEdit(true)} className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all">
+              Edit Profile
+            </button>
+          )}
         </div>
       </div>
 
@@ -542,6 +654,18 @@ function Profile() {
           )}
         </div>
       </div>
+      {/* Edit Profile Overlay */}
+      {showEdit && (
+        <EditProfile
+          user={profileUser}
+          onClose={() => setShowEdit(false)}
+          onSave={async (data) => {
+            await apiService.updateProfile(data);
+            // Optionally, refetch profile data here
+            setProfileUser({ ...profileUser, ...data });
+          }}
+        />
+      )}
     </div>
   );
 }
