@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Navigation from "../components/Navigation";
 import {
   Bell,
@@ -11,7 +11,6 @@ import {
   Eye,
   MoreHorizontal,
   Check,
-  X,
 } from "lucide-react";
 
 interface Alert {
@@ -39,7 +38,6 @@ interface Alert {
 const Alert = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [darkMode, setDarkMode] = useState(false);
-  const [selectedAlerts, setSelectedAlerts] = useState<number[]>([]);
 
   const alerts: Alert[] = [
     {
@@ -185,14 +183,6 @@ const Alert = () => {
       : alerts.filter((alert) => alert.type === activeTab);
 
   const unreadCount = alerts.filter((alert) => !alert.isRead).length;
-
-  const toggleAlertSelection = (alertId: number) => {
-    setSelectedAlerts((prev) =>
-      prev.includes(alertId)
-        ? prev.filter((id) => id !== alertId)
-        : [...prev, alertId]
-    );
-  };
 
   const markAsRead = (alertId: number) => {
     // In a real app, this would update the backend

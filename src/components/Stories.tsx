@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, ChevronRight, Camera, Play } from "lucide-react";
 
 interface Story {

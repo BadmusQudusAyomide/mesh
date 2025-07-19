@@ -1,7 +1,27 @@
 import Post from "./Post";
 
+interface PostData {
+  id: number;
+  user: string;
+  username: string;
+  avatar: string;
+  content: string;
+  time: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  isVerified: boolean;
+  engagement: number;
+  trending: boolean;
+  category: string;
+}
+
 interface PostsFeedProps {
-  posts: any[];
+  posts: PostData[];
   formatNumber: (num: number) => string;
   handleLike: (postId: number) => void;
   handleBookmark: (postId: number) => void;
