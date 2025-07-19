@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import { useAuth } from "../contexts/AuthContext";
+import { apiService } from "../lib/api";
+import type { User } from "../types";
 import {
   Crown,
   Settings,
@@ -13,19 +17,12 @@ import {
   MoreHorizontal,
   Camera,
   Edit3,
+  Loader2,
 } from "lucide-react";
 
-const user = {
-  name: "Badmus Qudus",
-  username: "badmuzzzzzzz",
-  avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-  bio: "Software Engineer & Tech Enthusiast | Building the future with AI ✨ | Based in Lagos, Nigeria 🇳🇬",
-  location: "Lagos, Nigeria",
-  website: "badmusqudusayomide.vercel.app",
-  joinDate: "March 2006",
-  coverImage:
-    "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop",
-};
+// Default cover image
+const defaultCoverImage =
+  "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop";
 
 const initialPosts = [
   {
@@ -190,10 +187,55 @@ const Post = ({
 );
 
 function Profile() {
+  const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+
   const [activeTab, setActiveTab] = useState("posts");
   const [darkMode] = useState(false);
   const [posts, setPosts] = useState(initialPosts);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!username) {
+        setError("Username is required");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await apiService.getUserProfile(username);
+        setProfileUser(response.user);
+        setIsFollowing(response.isFollowing);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError(err instanceof Error ? err.message : "Failed to load profile");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [username]);
+
+  const handleFollow = async () => {
+    if (!profileUser || !currentUser) return;
+
+    try {
+      const response = await apiService.followUser(profileUser._id);
+      setIsFollowing(response.isFollowing);
+    } catch (err) {
+      console.error("Error following user:", err);
+    }
+  };
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -226,10 +268,39 @@ function Profile() {
   };
 
   const tabs = [
-    { id: "posts", label: "Posts", count: 342 },
-    { id: "media", label: "Media", count: 89 },
-    { id: "likes", label: "Likes", count: 1.2 },
+    { id: "posts", label: "Posts", count: profileUser.postCount || 0 },
+    { id: "media", label: "Media", count: 0 }, // TODO: Implement media count
+    { id: "likes", label: "Likes", count: 0 }, // TODO: Implement likes count
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !profileUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error || "Profile not found"}</p>
+          <button
+            onClick={() => navigate("/")}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -250,13 +321,17 @@ function Profile() {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img
-              src={user.avatar}
+              src={profileUser.avatar}
               alt="Profile"
               className="w-10 h-10 rounded-xl object-cover"
             />
             <div>
-              <h1 className="font-bold text-lg text-gray-800">{user.name}</h1>
-              <p className="text-sm text-gray-600">{formatNumber(342)} posts</p>
+              <h1 className="font-bold text-lg text-gray-800">
+                {profileUser.fullName}
+              </h1>
+              <p className="text-sm text-gray-600">
+                {formatNumber(profileUser.postCount || 0)} posts
+              </p>
             </div>
           </div>
           <button className="p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all">
@@ -270,7 +345,7 @@ function Profile() {
         <div className="relative -mt-4">
           <div className="h-48 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-2xl overflow-hidden">
             <img
-              src={user.coverImage}
+              src={defaultCoverImage}
               alt="Cover"
               className="w-full h-full object-cover mix-blend-overlay opacity-80"
             />
@@ -284,7 +359,7 @@ function Profile() {
             <div className="flex items-end justify-between -mt-16 mb-4">
               <div className="relative">
                 <img
-                  src={user.avatar}
+                  src={profileUser.avatar}
                   alt="Profile"
                   className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
                 />
@@ -293,16 +368,18 @@ function Profile() {
                 </button>
               </div>
               <div className="flex space-x-3 mt-16">
-                <button
-                  onClick={() => setIsFollowing(!isFollowing)}
-                  className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                    isFollowing
-                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                      : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
-                  }`}
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </button>
+                {currentUser && currentUser._id !== profileUser._id && (
+                  <button
+                    onClick={handleFollow}
+                    className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                      isFollowing
+                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
+                    }`}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 <button className="px-6 py-2 rounded-xl font-medium bg-white/70 backdrop-blur-sm text-gray-800 border border-gray-200 hover:bg-white transition-all">
                   Message
                 </button>
@@ -312,42 +389,76 @@ function Profile() {
             <div className="space-y-3">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
-                  <span>{user.name}</span>
-                  <Crown className="w-6 h-6 text-yellow-500" />
+                  <span>{profileUser.fullName}</span>
+                  {profileUser.isVerified && (
+                    <Crown className="w-6 h-6 text-yellow-500" />
+                  )}
                 </h2>
-                <p className="text-gray-600">@{user.username}</p>
+                <p className="text-gray-600">@{profileUser.username}</p>
               </div>
 
-              <p className="text-gray-700 leading-relaxed">{user.bio}</p>
+              {profileUser.bio && (
+                <p className="text-gray-700 leading-relaxed">
+                  {profileUser.bio}
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{user.location}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <ExternalLink className="w-4 h-4" />
-                  <a href="#" className="text-blue-500 hover:underline">
-                    {user.website}
-                  </a>
-                </div>
+                {profileUser.location && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{profileUser.location}</span>
+                  </div>
+                )}
+                {profileUser.website && (
+                  <div className="flex items-center space-x-1">
+                    <ExternalLink className="w-4 h-4" />
+                    <a
+                      href={
+                        profileUser.website.startsWith("http")
+                          ? profileUser.website
+                          : `https://${profileUser.website}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      {profileUser.website}
+                    </a>
+                  </div>
+                )}
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
-                  <span>Joined {user.joinDate}</span>
+                  <span>
+                    Joined{" "}
+                    {new Date(profileUser.createdAt).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                      }
+                    )}
+                  </span>
                 </div>
               </div>
 
               <div className="flex space-x-6">
                 <div className="text-center">
-                  <div className="font-bold text-xl text-gray-800">2.5K</div>
+                  <div className="font-bold text-xl text-gray-800">
+                    {formatNumber(profileUser.followingCount || 0)}
+                  </div>
                   <div className="text-sm text-gray-600">Following</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-bold text-xl text-gray-800">15.2K</div>
+                  <div className="font-bold text-xl text-gray-800">
+                    {formatNumber(profileUser.followerCount || 0)}
+                  </div>
                   <div className="text-sm text-gray-600">Followers</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-bold text-xl text-gray-800">342</div>
+                  <div className="font-bold text-xl text-gray-800">
+                    {formatNumber(profileUser.postCount || 0)}
+                  </div>
                   <div className="text-sm text-gray-600">Posts</div>
                 </div>
               </div>

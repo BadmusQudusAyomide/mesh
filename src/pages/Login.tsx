@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Github,
   Twitter,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/toast";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const { addToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -32,16 +38,43 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      await login(formData.email, formData.password);
 
-    setIsLoading(false);
-    // Handle login logic here
-    console.log("Login attempt:", formData);
+      // Show success toast
+      addToast({
+        type: "success",
+        title: "Login Successful!",
+        message: "Welcome back to Mesh!",
+      });
 
-    // Redirect to home page after successful login
-    navigate("/home");
+      // Navigate to success page
+      navigate("/success", {
+        state: {
+          type: "login",
+          user: {
+            username: formData.email.split("@")[0],
+            fullName: formData.email.split("@")[0],
+            email: formData.email,
+          },
+        },
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Login failed";
+      setError(errorMessage);
+
+      // Show error toast
+      addToast({
+        type: "error",
+        title: "Login Failed",
+        message: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +109,12 @@ export default function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">

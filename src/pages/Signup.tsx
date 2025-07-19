@@ -10,6 +10,7 @@ import {
   Github,
   Twitter,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +22,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/toast";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const { addToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [formData, setFormData] = useState({
+    username: "",
     fullName: "",
     email: "",
     password: "",
@@ -37,6 +44,12 @@ export default function Signup() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
@@ -50,8 +63,8 @@ export default function Signup() {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     if (!formData.confirmPassword) {
@@ -72,16 +85,48 @@ export default function Signup() {
     }
 
     setIsLoading(true);
+    setApiError("");
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      await register(
+        formData.username,
+        formData.email,
+        formData.password,
+        formData.fullName
+      );
 
-    setIsLoading(false);
-    // Handle signup logic here
-    console.log("Signup attempt:", formData);
+      // Show success toast
+      addToast({
+        type: "success",
+        title: "Account Created!",
+        message: `Welcome to Mesh, ${formData.fullName}!`,
+      });
 
-    // Redirect to home page after successful signup
-    navigate("/home");
+      // Navigate to success page
+      navigate("/success", {
+        state: {
+          type: "signup",
+          user: {
+            username: formData.username,
+            fullName: formData.fullName,
+            email: formData.email,
+          },
+        },
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Registration failed";
+      setApiError(errorMessage);
+
+      // Show error toast
+      addToast({
+        type: "error",
+        title: "Registration Failed",
+        message: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,7 +145,7 @@ export default function Signup() {
   };
 
   const passwordRequirements = [
-    { text: "At least 8 characters", met: formData.password.length >= 8 },
+    { text: "At least 6 characters", met: formData.password.length >= 6 },
     { text: "One uppercase letter", met: /[A-Z]/.test(formData.password) },
     { text: "One lowercase letter", met: /[a-z]/.test(formData.password) },
     { text: "One number", met: /\d/.test(formData.password) },
@@ -129,7 +174,39 @@ export default function Signup() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {apiError && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <p className="text-sm text-red-600">{apiError}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-medium">
+                  Username
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    placeholder="Choose a username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className={`pl-10 h-11 ${
+                      errors.username
+                        ? "border-red-500 focus:border-red-500"
+                        : ""
+                    }`}
+                    required
+                  />
+                </div>
+                {errors.username && (
+                  <p className="text-sm text-red-500">{errors.username}</p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-medium">
                   Full name

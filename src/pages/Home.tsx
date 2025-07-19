@@ -6,6 +6,8 @@ import Stories from "../components/Stories";
 import CreatePost from "../components/CreatePost";
 import PostsFeed from "../components/PostsFeed";
 import { Zap, Target, BarChart3 } from "lucide-react";
+import ApiTest from "../components/ApiTest";
+import { useAuth } from "../contexts/AuthContext";
 import "../App.css";
 
 const initialPosts = [
@@ -226,29 +228,33 @@ const recentActivity = [
   },
 ];
 
-const user = {
-  name: "Ayomide Olamide",
-  username: "olamhi",
-  avatar: "https://randomuser.me/api/portraits/women/45.jpg",
-};
-
 function Home() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState(initialPosts);
   const [postContent, setPostContent] = useState("");
   const [previewImage, setPreviewImage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showApiTest, setShowApiTest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePostSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!postContent.trim() && !previewImage) return;
+
+    // Use the authenticated user from context
+    const currentUser = user || {
+      fullName: "Anonymous",
+      username: "anonymous",
+      avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+    };
+
     const newPost = {
       id: posts.length + 1,
-      user: user.name,
-      username: user.username,
-      avatar: user.avatar,
+      user: currentUser.fullName,
+      username: currentUser.username,
+      avatar: currentUser.avatar,
       content: postContent,
       time: "Just now",
       image: previewImage,
@@ -337,8 +343,27 @@ function Home() {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Mesh
               </h1>
+              {user && (
+                <div className="flex items-center space-x-2 ml-4">
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">{user.fullName}</p>
+                    <p className="text-gray-500">@{user.username}</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowApiTest(!showApiTest)}
+                className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                {showApiTest ? "Hide" : "Show"} API Test
+              </button>
               <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
                 <svg
                   className="w-6 h-6 text-gray-600"
@@ -376,12 +401,41 @@ function Home() {
       <div className="pb-8 px-4 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="hidden md:block">
-            <SidebarLeft trendingTopics={trendingTopics} user={user} />
+            <SidebarLeft
+              trendingTopics={trendingTopics}
+              user={
+                user
+                  ? {
+                      name: user.fullName,
+                      username: user.username,
+                      avatar: user.avatar,
+                    }
+                  : {
+                      name: "Anonymous",
+                      username: "anonymous",
+                      avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+                    }
+              }
+            />
           </div>
           <div className="lg:col-span-2 space-y-4">
+            {/* API Test Section - Only show for testing */}
+            {showApiTest && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <ApiTest />
+              </div>
+            )}
+
             <Stories
               stories={stories}
-              currentUser={user}
+              currentUser={
+                user
+                  ? {
+                      name: user.fullName,
+                      avatar: user.avatar,
+                    }
+                  : undefined
+              }
               onCreatePost={() => setShowCreatePost(true)}
             />
             <PostsFeed

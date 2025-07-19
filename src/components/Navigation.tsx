@@ -8,8 +8,11 @@ import {
   Compass,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/toast";
 
 interface NavigationProps {
   activeTab: string;
@@ -27,7 +30,26 @@ const Navigation = ({
   hideBottomBar,
 }: NavigationProps) => {
   const location = useLocation();
+  const { logout, user } = useAuth();
+  const { addToast } = useToast();
   const isChatPage = location.pathname.startsWith("/chat/");
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      addToast({
+        type: "success",
+        title: "Logged Out",
+        message: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      addToast({
+        type: "error",
+        title: "Logout Failed",
+        message: "There was an error logging out.",
+      });
+    }
+  };
   return (
     <>
       {/* Top nav: only on md+ */}
@@ -86,9 +108,9 @@ const Navigation = ({
               <Mail className="w-5 h-5" />
             </button>
             <Link
-              to="/profile"
+              to={user ? `/profile/${user.username}` : "/profile"}
               className={`p-2 rounded-xl transition-all duration-200 ${
-                location.pathname === "/profile"
+                location.pathname.startsWith("/profile")
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-gray-600 hover:bg-white/20"
               }`}
@@ -114,6 +136,13 @@ const Navigation = ({
               ) : (
                 <Moon className="w-5 h-5" />
               )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-gray-600 hover:bg-red-500 hover:text-white transition-all duration-200"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -176,9 +205,9 @@ const Navigation = ({
               <span className="text-xs">Inbox</span>
             </Link>
             <Link
-              to="/profile"
+              to={user ? `/profile/${user.username}` : "/profile"}
               className={`flex flex-col items-center flex-1 py-2 ${
-                location.pathname === "/profile"
+                location.pathname.startsWith("/profile")
                   ? "text-blue-600"
                   : "hover:text-blue-500"
               }`}
@@ -186,6 +215,14 @@ const Navigation = ({
               <User className="w-7 h-7 mb-1" />
               <span className="text-xs">Me</span>
             </Link>
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center flex-1 py-2 text-gray-600 hover:text-red-500"
+              title="Logout"
+            >
+              <LogOut className="w-7 h-7 mb-1" />
+              <span className="text-xs">Logout</span>
+            </button>
           </div>
         </nav>
       )}
