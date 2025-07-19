@@ -87,7 +87,37 @@ const initialPosts = [
   },
 ];
 
-const Post = ({ post, formatNumber, handleLike, handleBookmark }) => (
+interface PostProps {
+  post: {
+    id: number;
+    user: string;
+    username: string;
+    avatar: string;
+    content: string;
+    time: string;
+    image?: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+    isLiked: boolean;
+    isBookmarked: boolean;
+    isVerified: boolean;
+    engagement?: number;
+    trending?: boolean;
+    category?: string;
+  };
+  formatNumber: (num: number) => string;
+  handleLike: (postId: number) => void;
+  handleBookmark: (postId: number) => void;
+}
+
+const Post = ({
+  post,
+  formatNumber,
+  handleLike,
+  handleBookmark,
+}: PostProps) => (
   <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-start space-x-4 mb-4">
       <img
@@ -165,13 +195,13 @@ function Profile() {
   const [posts, setPosts] = useState(initialPosts);
   const [isFollowing, setIsFollowing] = useState(false);
 
-  const formatNumber = (num) => {
+  const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toString();
   };
 
-  const handleLike = (postId) => {
+  const handleLike = (postId: number): void => {
     setPosts(
       posts.map((post) =>
         post.id === postId
@@ -185,7 +215,7 @@ function Profile() {
     );
   };
 
-  const handleBookmark = (postId) => {
+  const handleBookmark = (postId: number): void => {
     setPosts(
       posts.map((post) =>
         post.id === postId
