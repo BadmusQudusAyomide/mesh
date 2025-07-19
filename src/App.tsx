@@ -4,6 +4,7 @@ import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
 import Chat from "./pages/Chat";
 import Explore from "./pages/Explore";
+import Alert from "./pages/Alert";
 import "./App.css";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/chat/:username" element={<Chat />} />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/alert" element={<Alert />} />
       </Routes>
     </Router>
   );

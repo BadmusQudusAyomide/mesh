@@ -150,10 +150,10 @@ const Navigation = ({
               <Compass className="w-7 h-7 mb-1" />
               <span className="text-xs">Explore</span>
             </Link>
-            <button
-              onClick={() => setActiveTab("notifications")}
+            <Link
+              to="/alert"
               className={`flex flex-col items-center flex-1 py-2 relative ${
-                activeTab === "notifications"
+                location.pathname === "/alert"
                   ? "text-blue-600"
                   : "hover:text-blue-500"
               }`}
@@ -163,7 +163,7 @@ const Navigation = ({
               <span className="absolute top-1 right-4 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
                 3
               </span>
-            </button>
+            </Link>
             <Link
               to="/inbox"
               className={`flex flex-col items-center flex-1 py-2 ${
