@@ -369,16 +369,16 @@ function Profile() {
               </div>
               <div className="flex space-x-3 mt-16">
                 {currentUser && currentUser._id !== profileUser._id && (
-                  <button
+                <button
                     onClick={handleFollow}
-                    className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                      isFollowing
-                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
-                    }`}
-                  >
-                    {isFollowing ? "Following" : "Follow"}
-                  </button>
+                  className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                    isFollowing
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
+                  }`}
+                >
+                  {isFollowing ? "Following" : "Follow"}
+                </button>
                 )}
                 <button className="px-6 py-2 rounded-xl font-medium bg-white/70 backdrop-blur-sm text-gray-800 border border-gray-200 hover:bg-white transition-all">
                   Message
@@ -391,7 +391,7 @@ function Profile() {
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
                   <span>{profileUser.fullName}</span>
                   {profileUser.isVerified && (
-                    <Crown className="w-6 h-6 text-yellow-500" />
+                  <Crown className="w-6 h-6 text-yellow-500" />
                   )}
                 </h2>
                 <p className="text-gray-600">@{profileUser.username}</p>
@@ -405,14 +405,14 @@ function Profile() {
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                 {profileUser.location && (
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="w-4 h-4" />
+                <div className="flex items-center space-x-1">
+                  <MapPin className="w-4 h-4" />
                     <span>{profileUser.location}</span>
-                  </div>
+                </div>
                 )}
                 {profileUser.website && (
-                  <div className="flex items-center space-x-1">
-                    <ExternalLink className="w-4 h-4" />
+                <div className="flex items-center space-x-1">
+                  <ExternalLink className="w-4 h-4" />
                     <a
                       href={
                         profileUser.website.startsWith("http")
@@ -424,8 +424,8 @@ function Profile() {
                       className="text-blue-500 hover:underline"
                     >
                       {profileUser.website}
-                    </a>
-                  </div>
+                  </a>
+                </div>
                 )}
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
