@@ -6,6 +6,8 @@ import Inbox from "./pages/Inbox";
 import Chat from "./pages/Chat";
 import Explore from "./pages/Explore";
 import Alert from "./pages/Alert";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import { usePreloader } from "./hooks/usePreloader";
 import "./App.css";
 
@@ -52,7 +54,9 @@ function App() {
       )}
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/chat/:username" element={<Chat />} />

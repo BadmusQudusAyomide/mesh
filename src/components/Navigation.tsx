@@ -129,9 +129,9 @@ const Navigation = ({
         >
           <div className="flex justify-around items-center h-16 text-gray-700 text-2xl">
             <Link
-              to="/"
+              to="/home"
               className={`flex flex-col items-center flex-1 py-2 ${
-                location.pathname === "/"
+                location.pathname === "/home"
                   ? "text-blue-600"
                   : "hover:text-blue-500"
               }`}

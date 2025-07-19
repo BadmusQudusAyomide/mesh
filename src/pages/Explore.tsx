@@ -410,6 +410,11 @@ function Explore() {
   // Preloader hook
   const { isItemPreloaded, getPreloadStatus } = usePreloader();
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Filter content based on search and category
   const filteredContent = content.filter((item) => {
     const matchesSearch =
