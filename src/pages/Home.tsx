@@ -11,9 +11,9 @@ import "../App.css";
 const initialPosts = [
   {
     id: 1,
-    user: "Chinedu Okafor",
-    username: "chineduokafor",
-    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+    user: "OmomhiI Islamiyat",
+    username: "omomhiiislamiyat",
+    avatar: "https://randomuser.me/api/portraits/women/45.jpg",
     content:
       "Just shipped a new feature that uses AI to optimize user experiences in real-time. The future is now! 🚀✨",
     time: "2m ago",
@@ -32,9 +32,9 @@ const initialPosts = [
   },
   {
     id: 2,
-    user: "Aisha Bello",
-    username: "aishabello",
-    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+    user: "Owoyemi Samuel",
+    username: "owoyemisamuel",
+    avatar: "https://randomuser.me/api/portraits/men/36.jpg",
     content:
       "Breaking: New study shows that decentralized networks are 40% more efficient than traditional systems. Game changer! 🌐⚡",
     time: "8m ago",
@@ -53,9 +53,9 @@ const initialPosts = [
   },
   {
     id: 3,
-    user: "Emeka Umeh",
-    username: "emekaumeh",
-    avatar: "https://randomuser.me/api/portraits/men/15.jpg",
+    user: "Codetream Eric",
+    username: "codetreameric",
+    avatar: "https://randomuser.me/api/portraits/men/37.jpg",
     content:
       "Mind-blowing sunset from my rooftop garden. Nature never fails to inspire! 🌅🌱",
     time: "15m ago",
@@ -74,9 +74,9 @@ const initialPosts = [
   },
   {
     id: 4,
-    user: "Ayomide Balogun",
-    username: "ayomidebalogun",
-    avatar: "https://randomuser.me/api/portraits/women/28.jpg",
+    user: "Alfred Chinedu",
+    username: "alfredchinedu",
+    avatar: "https://randomuser.me/api/portraits/men/38.jpg",
     content:
       "Excited to announce our new sustainable tech initiative! We're building the future while protecting our planet 🌍💚",
     time: "32m ago",
@@ -113,36 +113,36 @@ const stories = [
   },
   {
     id: 2,
-    user: "Sarah",
-    avatar: "https://randomuser.me/api/portraits/women/12.jpg",
+    user: "OmomhiI Islamiyat",
+    avatar: "https://randomuser.me/api/portraits/women/45.jpg",
     hasStory: true,
     isViewed: false,
   },
   {
     id: 3,
-    user: "Mike",
-    avatar: "https://randomuser.me/api/portraits/men/25.jpg",
+    user: "Owoyemi Samuel",
+    avatar: "https://randomuser.me/api/portraits/men/36.jpg",
     hasStory: true,
     isViewed: true,
   },
   {
     id: 4,
-    user: "Emma",
-    avatar: "https://randomuser.me/api/portraits/women/35.jpg",
+    user: "Codetream Eric",
+    avatar: "https://randomuser.me/api/portraits/men/37.jpg",
     hasStory: true,
     isViewed: false,
   },
   {
     id: 5,
-    user: "Josh",
-    avatar: "https://randomuser.me/api/portraits/men/18.jpg",
+    user: "Alfred Chinedu",
+    avatar: "https://randomuser.me/api/portraits/men/38.jpg",
     hasStory: true,
     isViewed: true,
   },
   {
     id: 6,
-    user: "Luna",
-    avatar: "https://randomuser.me/api/portraits/women/22.jpg",
+    user: "Ngozi Okonjo",
+    avatar: "https://randomuser.me/api/portraits/women/42.jpg",
     hasStory: true,
     isViewed: false,
   },
@@ -227,9 +227,9 @@ const recentActivity = [
 ];
 
 const user = {
-  name: "Badmus",
-  username: "badmus",
-  avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+  name: "OmomhiI Islamiyat",
+  username: "omomhiiislamiyat",
+  avatar: "https://randomuser.me/api/portraits/women/45.jpg",
 };
 
 function Home() {
@@ -326,107 +326,64 @@ function Home() {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
-      <div className="md:pt-24 pb-8 px-4 max-w-7xl mx-auto">
-        <Stories stories={stories} />
+      {/* App Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-lg">M</span>
+              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Mesh
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                <svg
+                  className="w-6 h-6 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-5 5v-5z"
+                  />
+                </svg>
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                <svg
+                  className="w-6 h-6 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="pb-8 px-4 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="hidden md:block">
             <SidebarLeft trendingTopics={trendingTopics} user={user} />
           </div>
-          <div className="lg:col-span-2 space-y-6">
-            {/* Create Post prompt: show first on mobile, after Stories on desktop */}
-            <div className="block md:hidden">
-              <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl mb-4">
-                <div className="flex items-center space-x-4 mb-4">
-                  <img
-                    src={user.avatar}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-2xl object-cover border-2 border-white"
-                  />
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 rounded-2xl px-4 py-3 text-left text-gray-500 transition-all duration-200"
-                  >
-                    What's on your mind?
-                  </button>
-                </div>
-                <div className="flex flex-nowrap space-x-2">
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-500/20 rounded-xl hover:bg-blue-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-blue-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-blue-600">
-                      Photo
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-500/20 rounded-xl hover:bg-green-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-green-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-green-600">
-                      Audio
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-500/20 rounded-xl hover:bg-purple-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-purple-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-purple-600">
-                      Location
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            {/* Desktop: show create post prompt after stories */}
-            <div className="hidden md:block">
-              <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
-                <div className="flex items-center space-x-4 mb-4">
-                  <img
-                    src={user.avatar}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-2xl object-cover border-2 border-white"
-                  />
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 rounded-2xl px-4 py-3 text-left text-gray-500 transition-all duration-200"
-                  >
-                    What's on your mind?
-                  </button>
-                </div>
-                <div className="flex flex-nowrap space-x-2">
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-500/20 rounded-xl hover:bg-blue-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-blue-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-blue-600">
-                      Photo
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-500/20 rounded-xl hover:bg-green-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-green-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-green-600">
-                      Audio
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-500/20 rounded-xl hover:bg-purple-500/30 transition-all duration-200"
-                  >
-                    <span className="w-4 h-4 bg-purple-600 rounded-full inline-block" />
-                    <span className="text-sm font-medium text-purple-600">
-                      Location
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div className="lg:col-span-2 space-y-4">
+            <Stories
+              stories={stories}
+              currentUser={user}
+              onCreatePost={() => setShowCreatePost(true)}
+            />
             <PostsFeed
               posts={posts}
               formatNumber={formatNumber}
