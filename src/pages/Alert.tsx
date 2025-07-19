@@ -44,9 +44,9 @@ const Alert = () => {
       id: 1,
       type: "like",
       user: {
-        name: "Owoyemi Samuel",
+        name: "Owoyemi",
         avatar: "https://randomuser.me/api/portraits/men/36.jpg",
-        username: "owoyemisamuel",
+        username: "owoyemi",
       },
       content: "liked your post",
       time: "2m ago",

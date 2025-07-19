@@ -57,7 +57,7 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
     },
     {
       id: 2,
-      user: "Owoyemi Samuel",
+      user: "Owoyemi ",
       avatar: "https://randomuser.me/api/portraits/men/36.jpg",
       text: "Love this update! Keep up the great work 👏",
       time: "1h",

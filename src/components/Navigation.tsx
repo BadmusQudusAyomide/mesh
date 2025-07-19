@@ -187,18 +187,6 @@ const Navigation = ({
               <span className="text-xs">Me</span>
             </Link>
           </div>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="absolute right-4 top-2 p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-all duration-200"
-            style={{ zIndex: 10 }}
-            aria-label="Toggle dark mode"
-          >
-            {darkMode ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button>
         </nav>
       )}
     </>

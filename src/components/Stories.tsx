@@ -47,7 +47,7 @@ const Stories = ({ stories, currentUser, onCreatePost }: StoriesProps) => {
   return (
     <div className="w-full">
       {/* Enhanced Create Post Section */}
-      <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 border border-white/30 shadow-2xl mb-4 hover:shadow-3xl transition-all duration-300">
+      <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 border border-white/30 shadow-2xl mb-6 hover:shadow-3xl transition-all duration-300 mt-6">
         {currentUser && (
           <div className="flex items-center gap-4">
             <div className="relative">

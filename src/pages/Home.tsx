@@ -11,11 +11,11 @@ import "../App.css";
 const initialPosts = [
   {
     id: 1,
-    user: "OmomhiI Islamiyat",
-    username: "omomhiiislamiyat",
+    user: "Adufe",
+    username: "omorrrrrr",
     avatar: "https://randomuser.me/api/portraits/women/45.jpg",
     content:
-      "Just shipped a new feature that uses AI to optimize user experiences in real-time. The future is now! 🚀✨",
+      "Omor i just did some cratzy thing now., CHeck ot out .The future is now! 🚀✨",
     time: "2m ago",
     image:
       "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
@@ -32,8 +32,8 @@ const initialPosts = [
   },
   {
     id: 2,
-    user: "Owoyemi Samuel",
-    username: "owoyemisamuel",
+    user: "Owoyemi ",
+    username: "owoyemi",
     avatar: "https://randomuser.me/api/portraits/men/36.jpg",
     content:
       "Breaking: New study shows that decentralized networks are 40% more efficient than traditional systems. Game changer! 🌐⚡",
@@ -113,14 +113,14 @@ const stories = [
   },
   {
     id: 2,
-    user: "OmomhiI Islamiyat",
+    user: "Omor omor",
     avatar: "https://randomuser.me/api/portraits/women/45.jpg",
     hasStory: true,
     isViewed: false,
   },
   {
     id: 3,
-    user: "Owoyemi Samuel",
+    user: "Owoyemi",
     avatar: "https://randomuser.me/api/portraits/men/36.jpg",
     hasStory: true,
     isViewed: true,
@@ -227,8 +227,8 @@ const recentActivity = [
 ];
 
 const user = {
-  name: "OmomhiI Islamiyat",
-  username: "omomhiiislamiyat",
+  name: "Ayomide Olamide",
+  username: "olamhi",
   avatar: "https://randomuser.me/api/portraits/women/45.jpg",
 };
 
