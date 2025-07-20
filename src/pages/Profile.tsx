@@ -23,67 +23,6 @@ import {
 const defaultCoverImage =
   "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop";
 
-// Remove the first (incorrect) PostProps interface and update initialPosts to use string ids
-const initialPosts = [
-  {
-    id: "1",
-    user: "Badmus Adebayo",
-    username: "badmus",
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    content:
-      "Just shipped a new feature that uses AI to optimize user experiences in real-time. The future is now! 🚀✨",
-    time: "2m ago",
-    image:
-      "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
-    likes: 342,
-    comments: 28,
-    shares: 15,
-    views: 2847,
-    isLiked: false,
-    isBookmarked: false,
-    isVerified: true,
-    engagement: 95,
-    trending: true,
-    category: "Tech",
-  },
-  {
-    id: "2",
-    user: "Badmus Adebayo",
-    username: "badmus",
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    content:
-      "Working on something exciting in the blockchain space. Can't wait to share more details soon! Who else is excited about Web3? 🌐⛓️",
-    time: "1h ago",
-    likes: 156,
-    comments: 42,
-    shares: 8,
-    views: 1203,
-    isLiked: true,
-    isBookmarked: false,
-    isVerified: true,
-    category: "Blockchain",
-  },
-  {
-    id: "3",
-    user: "Badmus Adebayo",
-    username: "badmus",
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    content:
-      "Beautiful sunset from my balcony today. Sometimes you need to pause and appreciate the simple things in life 🌅",
-    time: "3h ago",
-    image:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop",
-    likes: 89,
-    comments: 12,
-    shares: 3,
-    views: 456,
-    isLiked: false,
-    isBookmarked: true,
-    isVerified: true,
-    category: "Lifestyle",
-  },
-];
-
 // Only keep this PostProps interface, update id and handler types to string
 interface PostProps {
   post: {
@@ -104,10 +43,25 @@ interface PostProps {
     engagement?: number;
     trending?: boolean;
     category?: string;
+    commentList: Array<{
+      user: {
+        _id: string;
+        fullName: string;
+        username: string;
+        avatar: string;
+        isVerified: boolean;
+      };
+      text: string;
+      createdAt: string;
+    }>;
   };
   formatNumber: (num: number) => string;
   handleLike: (postId: string) => void;
   handleBookmark: (postId: string) => void;
+  onAddComment: (postId: string, text: string) => void;
+  commentInput: string;
+  setCommentInput: (val: string) => void;
+  currentUserId: string | null;
 }
 
 const Post = ({
@@ -115,6 +69,10 @@ const Post = ({
   formatNumber,
   handleLike,
   handleBookmark,
+  onAddComment,
+  commentInput,
+  setCommentInput,
+  currentUserId,
 }: PostProps) => (
   <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-start space-x-4 mb-4">
@@ -184,6 +142,55 @@ const Post = ({
         />
       </button>
     </div>
+    {/* Comments Section */}
+    <div className="mt-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (commentInput.trim()) {
+            onAddComment(post.id, commentInput);
+          }
+        }}
+        className="flex gap-2 items-center mb-2"
+      >
+        <input
+          type="text"
+          className="flex-1 border rounded-lg px-3 py-1"
+          placeholder="Add a comment..."
+          value={commentInput}
+          onChange={(e) => setCommentInput(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        >
+          Comment
+        </button>
+      </form>
+      <div className="space-y-2">
+        {post.commentList.map((comment, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <img
+              src={comment.user.avatar}
+              alt={comment.user.fullName}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <div>
+              <span className="font-semibold text-sm">
+                {comment.user.fullName}
+              </span>{" "}
+              <span className="text-xs text-gray-500">
+                @{comment.user.username}
+              </span>
+              <p className="text-gray-700 text-sm mb-0.5">{comment.text}</p>
+              <span className="text-xs text-gray-400">
+                {new Date(comment.createdAt).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
 );
 
@@ -236,7 +243,7 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
       const data = await res.json();
       if (type === "avatar") setAvatar(data.secure_url);
       if (type === "cover") setCover(data.secure_url);
-    } catch (err) {
+    } catch {
       alert("Image upload failed");
     } finally {
       setLoading(false);
@@ -249,7 +256,7 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
     try {
       await onSave({ fullName, bio, website, location, avatar, cover });
       onClose();
-    } catch (err) {
+    } catch {
       alert("Failed to update profile");
     } finally {
       setLoading(false);
@@ -386,14 +393,49 @@ function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
   const [darkMode] = useState(false);
-  const [posts, setPosts] = useState(initialPosts);
+  // Define the type for posts state
+  interface ProfilePost {
+    id: string;
+    user: string;
+    username: string;
+    avatar: string;
+    content: string;
+    time: string;
+    image?: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+    isLiked: boolean;
+    isBookmarked: boolean;
+    isVerified: boolean;
+    engagement?: number;
+    trending?: boolean;
+    category?: string;
+    commentList: Array<{
+      user: {
+        _id: string;
+        fullName: string;
+        username: string;
+        avatar: string;
+        isVerified: boolean;
+      };
+      text: string;
+      createdAt: string;
+    }>;
+  }
+  // Use the explicit type for posts state
+  const [posts, setPosts] = useState<ProfilePost[]>([]); // Start with empty array
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [commentInputs, setCommentInputs] = useState<{
+    [postId: string]: string;
+  }>({});
 
-  // Fetch profile data
+  // Fetch profile data and user posts
   useEffect(() => {
     const fetchProfile = async () => {
       if (!username) {
@@ -409,16 +451,40 @@ function Profile() {
         const response = await apiService.getUserProfile(username);
         setProfileUser(response.user);
         setIsFollowing(response.isFollowing);
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setError(err instanceof Error ? err.message : "Failed to load profile");
+
+        // Fetch posts for this user
+        const postsRes = await apiService.getPostsByUsername(username);
+        setPosts(
+          postsRes.posts.map((post) => ({
+            id: post._id,
+            user: post.user.fullName,
+            username: post.user.username,
+            avatar: post.user.avatar,
+            content: post.content,
+            time: new Date(post.createdAt).toLocaleString(),
+            image: post.image,
+            likes: post.likes.length,
+            comments: post.comments.length, // always from backend
+            shares: 0,
+            views: 0,
+            isLiked: currentUser ? post.likes.includes(currentUser._id) : false, // always from backend
+            isBookmarked: false,
+            isVerified: post.user.isVerified,
+            engagement: undefined,
+            trending: undefined,
+            category: undefined,
+            commentList: post.comments, // always from backend
+          }))
+        );
+      } catch {
+        setError("Failed to load profile");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProfile();
-  }, [username]);
+  }, [username, currentUser]);
 
   const handleFollow = async () => {
     if (!profileUser || !currentUser) return;
@@ -426,7 +492,7 @@ function Profile() {
     try {
       const response = await apiService.followUser(profileUser._id);
       setIsFollowing(response.isFollowing);
-    } catch (err) {
+    } catch {
       console.error("Error following user:", err);
     }
   };
@@ -437,19 +503,47 @@ function Profile() {
     return num.toString();
   };
 
-  // Update handleLike and handleBookmark to use string
-  const handleLike = (postId: string): void => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+  // Like handler
+  const handleLike = async (postId: string) => {
+    try {
+      const res = await apiService.likePost(postId);
+      setPosts((posts) =>
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: res.liked,
+                likes: res.likesCount,
+                comments: res.post.comments.length,
+                commentList: res.post.comments,
+              }
+            : post
+        )
+      );
+    } catch {
+      alert("Failed to like post");
+    }
+  };
+
+  // Comment handler
+  const handleAddComment = async (postId: string, text: string) => {
+    try {
+      const res = await apiService.addComment(postId, text);
+      setPosts((posts) =>
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: res.post.comments.length,
+                commentList: res.post.comments,
+              }
+            : post
+        )
+      );
+      setCommentInputs((inputs) => ({ ...inputs, [postId]: "" }));
+    } catch {
+      alert("Failed to add comment");
+    }
   };
 
   const handleBookmark = (postId: string): void => {
@@ -710,6 +804,15 @@ function Profile() {
                   formatNumber={formatNumber}
                   handleLike={handleLike}
                   handleBookmark={handleBookmark}
+                  onAddComment={handleAddComment}
+                  commentInput={commentInputs[post.id] || ""}
+                  setCommentInput={(val) =>
+                    setCommentInputs((inputs) => ({
+                      ...inputs,
+                      [post.id]: val,
+                    }))
+                  }
+                  currentUserId={currentUser?._id || null}
                 />
               ))}
             </div>
@@ -745,6 +848,15 @@ function Profile() {
                     formatNumber={formatNumber}
                     handleLike={handleLike}
                     handleBookmark={handleBookmark}
+                    onAddComment={handleAddComment}
+                    commentInput={commentInputs[post.id] || ""}
+                    setCommentInput={(val) =>
+                      setCommentInputs((inputs) => ({
+                        ...inputs,
+                        [post.id]: val,
+                      }))
+                    }
+                    currentUserId={currentUser?._id || null}
                   />
                 ))}
             </div>

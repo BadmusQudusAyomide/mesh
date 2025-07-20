@@ -8,6 +8,32 @@ import PostsFeed from "../components/PostsFeed";
 import { useAuth } from "../contexts/AuthContext";
 import "../App.css";
 import { apiService } from "../lib/api";
+import type { Post as BackendPost, FeedPost } from "../types";
+
+// Type for backend comment structure
+type BackendComment = {
+  _id?: string;
+  user: {
+    _id?: string;
+    fullName: string;
+    avatar: string;
+  };
+  text: string;
+  createdAt: string;
+};
+
+function mapBackendCommentToFeedComment(c: BackendComment, idx: number) {
+  return {
+    id: c._id || String(idx),
+    user: {
+      id: c.user._id || String(idx),
+      fullName: c.user.fullName,
+      avatar: c.user.avatar,
+    },
+    text: c.text,
+    createdAt: c.createdAt,
+  };
+}
 
 const trendingTopics = [
   { tag: "#AI", posts: "2.4M", growth: "+15%" },
@@ -146,36 +172,18 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
 const UPLOAD_PRESET =
   import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
 
-// 1. Add Post interface
-interface Post {
-  id: string;
-  user: string;
-  username: string;
-  avatar: string;
-  content: string;
-  time: string;
-  image?: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  views: number;
-  isLiked: boolean;
-  isBookmarked: boolean;
-  isVerified: boolean;
-  engagement: number;
-  trending: boolean;
-  category: string;
-}
-
 function Home() {
   // 2. Type posts as Post[]
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [postContent, setPostContent] = useState("");
   const [previewImage, setPreviewImage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [commentInputs, setCommentInputs] = useState<{
+    [postId: string]: string;
+  }>({});
   // 3. Get user from useAuth
   const { user } = useAuth();
 
@@ -183,53 +191,40 @@ function Home() {
     const fetchPosts = async () => {
       try {
         const res = await apiService.getPosts();
-        // Map backend posts to frontend format if needed
-        const backendPosts = res.posts.map(
-          (post: {
-            _id: string;
-            user?: {
-              fullName?: string;
-              username?: string;
-              avatar?: string;
-              isVerified?: boolean;
-            };
-            content: string;
-            createdAt: string;
-            image?: string;
-            likes?: unknown[];
-            comments?: unknown[];
-          }) => ({
-            id: post._id,
-            user: post.user?.fullName || "Anonymous",
-            username: post.user?.username || "anonymous",
-            avatar:
-              post.user?.avatar ||
-              "https://randomuser.me/api/portraits/men/1.jpg",
-            content: post.content,
-            time: new Date(post.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            image: post.image,
-            likes: post.likes?.length || 0,
-            comments: post.comments?.length || 0,
-            shares: 0,
-            views: 0,
-            isLiked: false,
-            isBookmarked: false,
-            isVerified: post.user?.isVerified || false,
-            engagement: 0,
-            trending: false,
-            category: "General",
-          })
+        setPosts(
+          res.posts.map(
+            (post: BackendPost): FeedPost => ({
+              id: post._id,
+              user: post.user?.fullName || "Anonymous",
+              username: post.user?.username || "anonymous",
+              avatar:
+                post.user?.avatar ||
+                "https://randomuser.me/api/portraits/men/1.jpg",
+              content: post.content,
+              time: new Date(post.createdAt).toLocaleString(),
+              image: post.image,
+              likes: post.likes.length,
+              comments: post.comments.length,
+              shares: 0,
+              views: 0,
+              isLiked: user ? post.likes.includes(user._id) : false,
+              isBookmarked: false,
+              isVerified: post.user?.isVerified || false,
+              engagement: 0,
+              trending: undefined,
+              category: undefined,
+              commentList: (post.comments as BackendComment[]).map(
+                mapBackendCommentToFeedComment
+              ),
+            })
+          )
         );
-        setPosts(backendPosts);
       } catch {
         // Optionally handle error
       }
     };
     fetchPosts();
-  }, []);
+  }, [user]);
 
   const handlePostSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -282,6 +277,7 @@ function Home() {
           engagement: 0,
           trending: false,
           category: "General",
+          commentList: [], // No comments for new posts
         },
         ...posts,
       ]);
@@ -321,18 +317,51 @@ function Home() {
     }
   };
 
-  const handleLike = (postId: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+  // Like handler
+  const handleLike = async (postId: string) => {
+    try {
+      const res = await apiService.likePost(postId);
+      setPosts((posts) =>
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: res.liked,
+                likes: res.likesCount,
+                comments: res.post.comments.length,
+                commentList: (res.post.comments as BackendComment[]).map(
+                  mapBackendCommentToFeedComment
+                ),
+              }
+            : post
+        )
+      );
+    } catch {
+      alert("Failed to like post");
+    }
+  };
+
+  // Comment handler
+  const handleAddComment = async (postId: string, text: string) => {
+    try {
+      const res = await apiService.addComment(postId, text);
+      setPosts((posts) =>
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: res.post.comments.length,
+                commentList: (res.post.comments as BackendComment[]).map(
+                  mapBackendCommentToFeedComment
+                ),
+              }
+            : post
+        )
+      );
+      setCommentInputs((inputs) => ({ ...inputs, [postId]: "" }));
+    } catch {
+      alert("Failed to add comment");
+    }
   };
 
   const handleBookmark = (postId: string) => {
@@ -440,6 +469,10 @@ function Home() {
               formatNumber={formatNumber}
               handleLike={handleLike}
               handleBookmark={handleBookmark}
+              onAddComment={handleAddComment}
+              commentInputs={commentInputs}
+              setCommentInputs={setCommentInputs}
+              currentUserId={user?._id || null}
             />
           </div>
           <SidebarRight

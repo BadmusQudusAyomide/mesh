@@ -7,6 +7,7 @@ import type {
   ProfileUpdateResponse, 
   LogoutResponse 
 } from '../types';
+import type { Post } from '../types';
 import { API_BASE_URL } from '../config';
 
 // Helper function to handle API responses
@@ -133,17 +134,39 @@ class ApiService {
   }
 
   // Create a new post
-  async createPost(data: { content: string; image?: string }): Promise<any> {
-    return this.request<any>("/posts", {
+  async createPost(data: { content: string; image?: string }): Promise<{ post: Post }> {
+    return this.request<{ post: Post }>("/posts", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   // Get all posts
-  async getPosts(): Promise<any> {
-    return this.request<any>("/posts", {
+  async getPosts(): Promise<{ posts: Post[] }> {
+    return this.request<{ posts: Post[] }>("/posts", {
       method: "GET",
+    });
+  }
+
+  // Get posts by username
+  async getPostsByUsername(username: string): Promise<{ posts: Post[] }> {
+    return this.request<{ posts: Post[] }>(`/posts/user/${username}`, {
+      method: "GET",
+    });
+  }
+
+  // Like or unlike a post
+  async likePost(postId: string): Promise<{ liked: boolean; likesCount: number; post: Post }> {
+    return this.request<{ liked: boolean; likesCount: number; post: Post }>(`/posts/${postId}/like`, {
+      method: "POST",
+    });
+  }
+
+  // Add a comment to a post
+  async addComment(postId: string, text: string): Promise<{ comment: Post['comments'][0]; post: Post }> {
+    return this.request<{ comment: Post['comments'][0]; post: Post }>(`/posts/${postId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
     });
   }
 }
