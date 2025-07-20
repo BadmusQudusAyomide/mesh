@@ -5,103 +5,9 @@ import SidebarRight from "../components/SidebarRight";
 import Stories from "../components/Stories";
 import CreatePost from "../components/CreatePost";
 import PostsFeed from "../components/PostsFeed";
-import { Zap, Target, BarChart3 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import "../App.css";
 import { apiService } from "../lib/api";
-
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
-  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-}/image/upload`;
-const UPLOAD_PRESET =
-  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
-
-const initialPosts = [
-  {
-    id: 1,
-    user: "Adufe",
-    username: "omorrrrrr",
-    avatar: "https://randomuser.me/api/portraits/women/45.jpg",
-    content:
-      "Omor i just did some cratzy thing now., CHeck ot out .The future is now! 🚀✨",
-    time: "2m ago",
-    image:
-      "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
-    likes: 342,
-    comments: 28,
-    shares: 15,
-    views: 2847,
-    isLiked: false,
-    isBookmarked: false,
-    isVerified: true,
-    engagement: 95,
-    trending: true,
-    category: "Tech",
-  },
-  {
-    id: 2,
-    user: "Owoyemi ",
-    username: "owoyemi",
-    avatar: "https://randomuser.me/api/portraits/men/36.jpg",
-    content:
-      "Breaking: New study shows that decentralized networks are 40% more efficient than traditional systems. Game changer! 🌐⚡",
-    time: "8m ago",
-    image:
-      "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=600&fit=crop",
-    likes: 1247,
-    comments: 156,
-    shares: 89,
-    views: 8934,
-    isLiked: true,
-    isBookmarked: true,
-    isVerified: true,
-    engagement: 99,
-    trending: true,
-    category: "News",
-  },
-  {
-    id: 3,
-    user: "Codetream Eric",
-    username: "codetreameric",
-    avatar: "https://randomuser.me/api/portraits/men/37.jpg",
-    content:
-      "Mind-blowing sunset from my rooftop garden. Nature never fails to inspire! 🌅🌱",
-    time: "15m ago",
-    image:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop",
-    likes: 523,
-    comments: 67,
-    shares: 34,
-    views: 3456,
-    isLiked: false,
-    isBookmarked: false,
-    isVerified: false,
-    engagement: 78,
-    trending: false,
-    category: "Photography",
-  },
-  {
-    id: 4,
-    user: "Alfred Chinedu",
-    username: "alfredchinedu",
-    avatar: "https://randomuser.me/api/portraits/men/38.jpg",
-    content:
-      "Excited to announce our new sustainable tech initiative! We're building the future while protecting our planet 🌍💚",
-    time: "32m ago",
-    image:
-      "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?w=800&h=600&fit=crop",
-    likes: 892,
-    comments: 124,
-    shares: 67,
-    views: 5678,
-    isLiked: false,
-    isBookmarked: true,
-    isVerified: true,
-    engagement: 88,
-    trending: false,
-    category: "Environment",
-  },
-];
 
 const trendingTopics = [
   { tag: "#AI", posts: "2.4M", growth: "+15%" },
@@ -188,19 +94,19 @@ const liveEvents = [
 
 const aiInsights = [
   {
-    icon: <Zap className="w-4 h-4 text-purple-500" />,
+    icon: null,
     title: "Engagement Boost",
     value: "+23%",
     description: "Your posts perform better with images and hashtags",
   },
   {
-    icon: <Target className="w-4 h-4 text-blue-500" />,
+    icon: null,
     title: "Best Time",
     value: "2-4 PM",
     description: "Optimal posting time for your audience",
   },
   {
-    icon: <BarChart3 className="w-4 h-4 text-green-500" />,
+    icon: null,
     title: "Growth Rate",
     value: "+18%",
     description: "Your follower growth this week",
@@ -234,47 +140,91 @@ const recentActivity = [
   },
 ];
 
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
+  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+}/image/upload`;
+const UPLOAD_PRESET =
+  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
+
+// 1. Add Post interface
+interface Post {
+  id: string;
+  user: string;
+  username: string;
+  avatar: string;
+  content: string;
+  time: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  isVerified: boolean;
+  engagement: number;
+  trending: boolean;
+  category: string;
+}
+
 function Home() {
-  const { user } = useAuth();
-  const [posts, setPosts] = useState(initialPosts);
+  // 2. Type posts as Post[]
+  const [posts, setPosts] = useState<Post[]>([]);
   const [postContent, setPostContent] = useState("");
   const [previewImage, setPreviewImage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 3. Get user from useAuth
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const res = await apiService.getPosts();
         // Map backend posts to frontend format if needed
-        const backendPosts = res.posts.map((post: any) => ({
-          id: post._id,
-          user: post.user?.fullName || "Anonymous",
-          username: post.user?.username || "anonymous",
-          avatar:
-            post.user?.avatar ||
-            "https://randomuser.me/api/portraits/men/1.jpg",
-          content: post.content,
-          time: new Date(post.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          image: post.image,
-          likes: post.likes?.length || 0,
-          comments: post.comments?.length || 0,
-          shares: 0,
-          views: 0,
-          isLiked: false,
-          isBookmarked: false,
-          isVerified: post.user?.isVerified || false,
-          engagement: 0,
-          trending: false,
-          category: "General",
-        }));
+        const backendPosts = res.posts.map(
+          (post: {
+            _id: string;
+            user?: {
+              fullName?: string;
+              username?: string;
+              avatar?: string;
+              isVerified?: boolean;
+            };
+            content: string;
+            createdAt: string;
+            image?: string;
+            likes?: unknown[];
+            comments?: unknown[];
+          }) => ({
+            id: post._id,
+            user: post.user?.fullName || "Anonymous",
+            username: post.user?.username || "anonymous",
+            avatar:
+              post.user?.avatar ||
+              "https://randomuser.me/api/portraits/men/1.jpg",
+            content: post.content,
+            time: new Date(post.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            image: post.image,
+            likes: post.likes?.length || 0,
+            comments: post.comments?.length || 0,
+            shares: 0,
+            views: 0,
+            isLiked: false,
+            isBookmarked: false,
+            isVerified: post.user?.isVerified || false,
+            engagement: 0,
+            trending: false,
+            category: "General",
+          })
+        );
         setPosts(backendPosts);
-      } catch (err) {
+      } catch {
         // Optionally handle error
       }
     };
@@ -298,7 +248,7 @@ function Home() {
         });
         const data = await res.json();
         imageUrl = data.secure_url;
-      } catch (err) {
+      } catch {
         alert("Image upload failed");
         return;
       }
@@ -328,7 +278,7 @@ function Home() {
           views: 0,
           isLiked: false,
           isBookmarked: false,
-          isVerified: false,
+          isVerified: user?.isVerified || false,
           engagement: 0,
           trending: false,
           category: "General",
@@ -338,7 +288,7 @@ function Home() {
       setPostContent("");
       setPreviewImage("");
       setShowCreatePost(false);
-    } catch (err) {
+    } catch {
       alert("Failed to create post");
     }
   };
@@ -346,7 +296,9 @@ function Home() {
   // Helper to convert dataURL to File
   function dataURLtoFile(dataurl: string, filename: string) {
     const arr = dataurl.split(",");
-    const mime = arr[0].match(/:(.*?);/)[1];
+    // 4. Fix possible null in match
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "";
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
@@ -369,7 +321,7 @@ function Home() {
     }
   };
 
-  const handleLike = (postId: number) => {
+  const handleLike = (postId: string) => {
     setPosts(
       posts.map((post) =>
         post.id === postId
@@ -383,7 +335,7 @@ function Home() {
     );
   };
 
-  const handleBookmark = (postId: number) => {
+  const handleBookmark = (postId: string) => {
     setPosts(
       posts.map((post) =>
         post.id === postId
@@ -466,10 +418,10 @@ function Home() {
           <div className="lg:col-span-2 space-y-4">
             {/* API Test Section - Only show for testing */}
             {/* {showApiTest && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <ApiTest />
-              </div>
-            )} */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <ApiTest />
+            </div>
+          )} */}
 
             <Stories
               stories={stories}

@@ -17,7 +17,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 
 interface Post {
-  id: number;
+  id: string;
   user: string;
   username: string;
   avatar: string;
@@ -39,8 +39,8 @@ interface Post {
 interface PostProps {
   post: Post;
   formatNumber: (num: number) => string;
-  handleLike: (postId: number) => void;
-  handleBookmark: (postId: number) => void;
+  handleLike: (postId: string) => void;
+  handleBookmark: (postId: string) => void;
 }
 
 const Post = ({ post, formatNumber, handleLike }: PostProps) => {
