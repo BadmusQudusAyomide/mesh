@@ -31,9 +31,19 @@ interface Post {
   isLiked: boolean;
   isBookmarked: boolean;
   isVerified: boolean;
-  engagement: number;
-  trending: boolean;
-  category: string;
+  engagement?: number;
+  trending?: boolean;
+  category?: string;
+  commentList: {
+    id: string;
+    user: {
+      id: string;
+      fullName: string;
+      avatar: string;
+    };
+    text: string;
+    createdAt: string;
+  }[];
 }
 
 interface PostProps {
@@ -41,89 +51,25 @@ interface PostProps {
   formatNumber: (num: number) => string;
   handleLike: (postId: string) => void;
   handleBookmark: (postId: string) => void;
+  onAddComment?: (postId: string, text: string) => void;
+  commentInput?: string;
+  setCommentInput?: (val: string) => void;
 }
 
-const Post = ({ post, formatNumber, handleLike }: PostProps) => {
-  // State management
-  const [comments, setComments] = useState([
-    {
-      id: 1,
-      user: "Omo omor",
-      avatar: "https://randomuser.me/api/portraits/women/45.jpg",
-      text: "This is amazing! 🔥",
-      time: "2h",
-      likes: 12,
-      isLiked: false,
-    },
-    {
-      id: 2,
-      user: "Owoyemi ",
-      avatar: "https://randomuser.me/api/portraits/men/36.jpg",
-      text: "Love this update! Keep up the great work 👏",
-      time: "1h",
-      likes: 5,
-      isLiked: true,
-    },
-    {
-      id: 3,
-      user: "Codetream Eric",
-      avatar: "https://randomuser.me/api/portraits/men/37.jpg",
-      text: "So inspiring! This really motivates me to push forward with my own projects.",
-      time: "45m",
-      likes: 8,
-      isLiked: false,
-    },
-    {
-      id: 4,
-      user: "Alfred Chinedu",
-      avatar: "https://randomuser.me/api/portraits/men/38.jpg",
-      text: "Amazing work! How long did this take you to complete?",
-      time: "30m",
-      likes: 3,
-      isLiked: false,
-    },
-    {
-      id: 5,
-      user: "Ngozi Okonjo",
-      avatar: "https://randomuser.me/api/portraits/women/42.jpg",
-      text: "Proud to see Nigerians doing great things!",
-      time: "10m",
-      likes: 6,
-      isLiked: false,
-    },
-    {
-      id: 6,
-      user: "Tunde Bakare",
-      avatar: "https://randomuser.me/api/portraits/men/40.jpg",
-      text: "This is exactly what we need more of in the tech space. Keep pushing boundaries!",
-      time: "5m",
-      likes: 2,
-      isLiked: false,
-    },
-    {
-      id: 7,
-      user: "Funmi Adebayo",
-      avatar: "https://randomuser.me/api/portraits/women/50.jpg",
-      text: "Inspiring work! Can't wait to see what you build next 🚀",
-      time: "3m",
-      likes: 4,
-      isLiked: false,
-    },
-    {
-      id: 8,
-      user: "Kemi Adeola",
-      avatar: "https://randomuser.me/api/portraits/women/55.jpg",
-      text: "This is what innovation looks like! Well done 👏👏👏",
-      time: "1m",
-      likes: 1,
-      isLiked: false,
-    },
-  ]);
-
-  const [commentInput, setCommentInput] = useState("");
+const Post = ({
+  post,
+  formatNumber,
+  handleLike,
+  onAddComment,
+  commentInput = "",
+  setCommentInput,
+}: PostProps) => {
+  // Remove mock comments state
+  // const [comments, setComments] = useState([...]);
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  // Remove replyingTo and setReplyingTo
+  // const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -139,52 +85,14 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Focus comment input when replying
-  useEffect(() => {
-    if (replyingTo && commentInputRef.current) {
-      commentInputRef.current.focus();
-    }
-  }, [replyingTo]);
+  // Remove focus effect for replyingTo
+  // useEffect(() => {
+  //   if (replyingTo && commentInputRef.current) {
+  //     commentInputRef.current.focus();
+  //   }
+  // }, [replyingTo]);
 
-  const handleAddComment = (e: React.FormEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    if (!commentInput.trim()) return;
-
-    const newComment = {
-      id: comments.length + 1,
-      user: "You",
-      avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-      text: replyingTo
-        ? `@${comments.find((c) => c.id === replyingTo)?.user} ${commentInput}`
-        : commentInput,
-      time: "now",
-      likes: 0,
-      isLiked: false,
-    };
-
-    setComments([...comments, newComment]);
-    setCommentInput("");
-    setReplyingTo(null);
-  };
-
-  const handleCommentLike = (commentId: number) => {
-    setComments(
-      comments.map((comment) =>
-        comment.id === commentId
-          ? {
-              ...comment,
-              isLiked: !comment.isLiked,
-              likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
-            }
-          : comment
-      )
-    );
-  };
-
-  const handleReply = (commentId: number, username: string) => {
-    setReplyingTo(commentId);
-    setCommentInput(`@${username} `);
-  };
+  // Remove handleAddComment, handleCommentLike, handleReply logic for local state
 
   const menuOptions = [
     {
@@ -221,6 +129,15 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
       danger: true,
     },
   ];
+
+  // Add submit handler for comment
+  const handleCommentSubmit = (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (onAddComment && setCommentInput && commentInput.trim()) {
+      onAddComment(post.id, commentInput);
+      setCommentInput("");
+    }
+  };
 
   return (
     <>
@@ -355,34 +272,37 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
         </div>
 
         {/* Single Random Comment Preview */}
-        {comments.length > 0 && !showComments && (
+        {post.commentList.length > 0 && !showComments && (
           <div className="px-4 py-3 border-t border-gray-200">
             <div className="flex items-start gap-3">
               <img
-                src={comments[0].avatar}
-                alt={comments[0].user}
+                src={post.commentList[0].user.avatar}
+                alt={post.commentList[0].user.fullName}
                 className="w-8 h-8 rounded-full object-cover"
               />
               <div className="flex-1 bg-gray-100 rounded-2xl px-3 py-2">
                 <span className="font-semibold text-sm text-gray-900 mr-1">
-                  {comments[0].user}
+                  {post.commentList[0].user.fullName}
                 </span>
                 <span className="text-sm text-gray-800">
-                  {comments[0].text}
+                  {post.commentList[0].text}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-4 mt-2 ml-11">
-              <span className="text-xs text-gray-500">Like</span>
-              <span className="text-xs text-gray-500">Reply</span>
-              <span className="text-xs text-gray-500">{comments[0].time}</span>
+              <span className="text-xs text-gray-500">
+                {new Date(post.commentList[0].createdAt).toLocaleString()}
+              </span>
             </div>
           </div>
         )}
 
         {/* Comment Input */}
         <div className="px-4 py-3 border-t border-gray-200">
-          <div className="flex items-center gap-2">
+          <form
+            className="flex items-center gap-2"
+            onSubmit={handleCommentSubmit}
+          >
             <img
               src="https://randomuser.me/api/portraits/men/1.jpg"
               alt="You"
@@ -393,14 +313,35 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
                 type="text"
                 placeholder="Write a comment..."
                 className="w-full px-3 py-2 pr-10 rounded-full bg-gray-100 border-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                value={commentInput}
+                onChange={(e) =>
+                  setCommentInput && setCommentInput(e.target.value)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) handleCommentSubmit(e);
+                }}
               />
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-                <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
+                <button
+                  className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                  type="button"
+                >
                   <Smile className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
             </div>
-          </div>
+            {commentInput &&
+              commentInput.trim() &&
+              onAddComment &&
+              setCommentInput && (
+                <button
+                  type="submit"
+                  className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Post
+                </button>
+              )}
+          </form>
         </div>
       </div>
 
@@ -476,7 +417,9 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span>{formatNumber(comments.length)} comments</span>
+                      <span>
+                        {formatNumber(post.commentList.length)} comments
+                      </span>
                       <span>{formatNumber(post.shares)} shares</span>
                     </div>
                   </div>
@@ -488,53 +431,32 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
             <div className="bg-white">
               <div className="px-4 py-3 border-b border-gray-200">
                 <h4 className="font-semibold text-gray-900">
-                  Comments ({comments.length})
+                  Comments ({post.commentList.length})
                 </h4>
               </div>
 
               {/* Comments List */}
               <div className="px-4 py-2 space-y-4">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-3 py-2">
+                {post.commentList.map((comment, idx) => (
+                  <div key={idx} className="flex items-start gap-3 py-2">
                     <img
-                      src={comment.avatar}
-                      alt={comment.user}
+                      src={comment.user.avatar}
+                      alt={comment.user.fullName}
                       className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="bg-gray-100 rounded-2xl px-3 py-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-gray-900 text-sm">
-                            {comment.user}
+                            {comment.user.fullName}
                           </span>
                         </div>
                         <p className="text-gray-800 text-sm">{comment.text}</p>
                       </div>
                       <div className="flex items-center gap-4 mt-2 ml-3">
                         <span className="text-xs text-gray-500">
-                          {comment.time}
+                          {new Date(comment.createdAt).toLocaleString()}
                         </span>
-                        <button
-                          onClick={() => handleCommentLike(comment.id)}
-                          className={`flex items-center gap-1 text-xs transition-colors ${
-                            comment.isLiked
-                              ? "text-blue-600"
-                              : "text-gray-500 hover:text-gray-700"
-                          }`}
-                        >
-                          <Heart
-                            className={`w-3 h-3 ${
-                              comment.isLiked ? "fill-current" : ""
-                            }`}
-                          />
-                          {comment.likes > 0 && <span>{comment.likes}</span>}
-                        </button>
-                        <button
-                          onClick={() => handleReply(comment.id, comment.user)}
-                          className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                          Reply
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -550,17 +472,22 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
               alt="You"
               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
             />
-            <div className="flex-1 relative">
+            <form
+              className="flex-1 relative flex items-center gap-2"
+              onSubmit={handleCommentSubmit}
+            >
               <input
                 ref={commentInputRef}
                 type="text"
                 value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAddComment(e)}
-                placeholder={
-                  replyingTo ? "Write a reply..." : "Write a comment..."
+                onChange={(e) =>
+                  setCommentInput && setCommentInput(e.target.value)
                 }
+                placeholder="Write a comment..."
                 className="w-full px-3 py-2 pr-10 rounded-full bg-gray-100 border-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) handleCommentSubmit(e);
+                }}
               />
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                 <button
@@ -570,15 +497,18 @@ const Post = ({ post, formatNumber, handleLike }: PostProps) => {
                   <Smile className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
-            </div>
-            {commentInput.trim() && (
-              <button
-                onClick={handleAddComment}
-                className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-medium hover:bg-blue-600 transition-colors"
-              >
-                Post
-              </button>
-            )}
+              {commentInput &&
+                commentInput.trim() &&
+                onAddComment &&
+                setCommentInput && (
+                  <button
+                    type="submit"
+                    className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-medium hover:bg-blue-600 transition-colors"
+                  >
+                    Post
+                  </button>
+                )}
+            </form>
           </div>
         </div>
       )}

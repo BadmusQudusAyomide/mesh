@@ -58,4 +58,62 @@ export interface ProfileUpdateResponse {
 
 export interface LogoutResponse {
   message: string;
+}
+
+// Post types
+export interface Post {
+  _id: string;
+  user: {
+    _id: string;
+    fullName: string;
+    username: string;
+    avatar: string;
+    isVerified: boolean;
+  };
+  content: string;
+  image?: string;
+  likes: string[];
+  comments: Array<{
+    user: {
+      _id: string;
+      fullName: string;
+      username: string;
+      avatar: string;
+      isVerified: boolean;
+    };
+    text: string;
+    createdAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedPost {
+  id: string;
+  user: string;
+  username: string;
+  avatar: string;
+  content: string;
+  time: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  isVerified: boolean;
+  engagement: number;
+  trending?: boolean;
+  category?: string;
+  commentList: Array<{
+    id: string;
+    user: {
+      id: string;
+      fullName: string;
+      avatar: string;
+    };
+    text: string;
+    createdAt: string;
+  }>;
 } 

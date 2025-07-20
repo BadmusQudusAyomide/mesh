@@ -1,6 +1,6 @@
 import Post from "./Post";
 
-interface PostData {
+interface FeedPost {
   id: string;
   user: string;
   username: string;
@@ -15,16 +15,31 @@ interface PostData {
   isLiked: boolean;
   isBookmarked: boolean;
   isVerified: boolean;
-  engagement: number;
-  trending: boolean;
-  category: string;
+  engagement?: number;
+  trending?: boolean;
+  category?: string;
+  commentList: Array<{
+    id: string;
+    user: {
+      id: string;
+      fullName: string;
+      avatar: string;
+    };
+    text: string;
+    createdAt: string;
+  }>;
 }
 
 interface PostsFeedProps {
-  posts: PostData[];
+  posts: FeedPost[];
   formatNumber: (num: number) => string;
   handleLike: (postId: string) => void;
   handleBookmark: (postId: string) => void;
+  onAddComment?: (postId: string, text: string) => void;
+  commentInputs?: { [postId: string]: string };
+  setCommentInputs?: React.Dispatch<
+    React.SetStateAction<{ [postId: string]: string }>
+  >;
 }
 
 const PostsFeed = ({
@@ -32,6 +47,9 @@ const PostsFeed = ({
   formatNumber,
   handleLike,
   handleBookmark,
+  onAddComment,
+  commentInputs,
+  setCommentInputs,
 }: PostsFeedProps) => (
   <div className="space-y-4 w-full max-w-2xl mx-auto">
     {posts.map((post) => (
@@ -41,6 +59,14 @@ const PostsFeed = ({
         formatNumber={formatNumber}
         handleLike={handleLike}
         handleBookmark={handleBookmark}
+        onAddComment={onAddComment}
+        commentInput={commentInputs ? commentInputs[post.id] || "" : ""}
+        setCommentInput={
+          setCommentInputs
+            ? (val: string) =>
+                setCommentInputs((inputs) => ({ ...inputs, [post.id]: val }))
+            : undefined
+        }
       />
     ))}
   </div>
