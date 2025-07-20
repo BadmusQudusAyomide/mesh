@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navigation from "../components/Navigation";
 import SidebarLeft from "../components/SidebarLeft";
 import SidebarRight from "../components/SidebarRight";
@@ -8,6 +8,13 @@ import PostsFeed from "../components/PostsFeed";
 import { Zap, Target, BarChart3 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import "../App.css";
+import { apiService } from "../lib/api";
+
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
+  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+}/image/upload`;
+const UPLOAD_PRESET =
+  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
 
 const initialPosts = [
   {
@@ -237,41 +244,117 @@ function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePostSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await apiService.getPosts();
+        // Map backend posts to frontend format if needed
+        const backendPosts = res.posts.map((post: any) => ({
+          id: post._id,
+          user: post.user?.fullName || "Anonymous",
+          username: post.user?.username || "anonymous",
+          avatar:
+            post.user?.avatar ||
+            "https://randomuser.me/api/portraits/men/1.jpg",
+          content: post.content,
+          time: new Date(post.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          image: post.image,
+          likes: post.likes?.length || 0,
+          comments: post.comments?.length || 0,
+          shares: 0,
+          views: 0,
+          isLiked: false,
+          isBookmarked: false,
+          isVerified: post.user?.isVerified || false,
+          engagement: 0,
+          trending: false,
+          category: "General",
+        }));
+        setPosts(backendPosts);
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchPosts();
+  }, []);
+
+  const handlePostSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!postContent.trim() && !previewImage) return;
 
-    // Use the authenticated user from context
-    const currentUser = user || {
-      fullName: "Anonymous",
-      username: "anonymous",
-      avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    };
+    let imageUrl = "";
+    if (previewImage && previewImage.startsWith("data:")) {
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append("file", dataURLtoFile(previewImage, "post-image.png"));
+      formData.append("upload_preset", UPLOAD_PRESET);
+      try {
+        const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        imageUrl = data.secure_url;
+      } catch (err) {
+        alert("Image upload failed");
+        return;
+      }
+    } else if (previewImage) {
+      imageUrl = previewImage;
+    }
 
-    const newPost = {
-      id: posts.length + 1,
-      user: currentUser.fullName,
-      username: currentUser.username,
-      avatar: currentUser.avatar,
-      content: postContent,
-      time: "Just now",
-      image: previewImage,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      views: 0,
-      isLiked: false,
-      isBookmarked: false,
-      isVerified: false,
-      engagement: 0,
-      trending: false,
-      category: "General",
-    };
-    setPosts([newPost, ...posts]);
-    setPostContent("");
-    setPreviewImage("");
-    setShowCreatePost(false);
+    try {
+      const postRes = await apiService.createPost({
+        content: postContent,
+        image: imageUrl || undefined,
+      });
+      // Add the new post to the feed (optimistic update)
+      setPosts([
+        {
+          id: postRes.post._id,
+          user: user?.fullName || "Anonymous",
+          username: user?.username || "anonymous",
+          avatar:
+            user?.avatar || "https://randomuser.me/api/portraits/men/1.jpg",
+          content: postRes.post.content,
+          time: "Just now",
+          image: postRes.post.image,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          views: 0,
+          isLiked: false,
+          isBookmarked: false,
+          isVerified: false,
+          engagement: 0,
+          trending: false,
+          category: "General",
+        },
+        ...posts,
+      ]);
+      setPostContent("");
+      setPreviewImage("");
+      setShowCreatePost(false);
+    } catch (err) {
+      alert("Failed to create post");
+    }
   };
+
+  // Helper to convert dataURL to File
+  function dataURLtoFile(dataurl: string, filename: string) {
+    const arr = dataurl.split(",");
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];

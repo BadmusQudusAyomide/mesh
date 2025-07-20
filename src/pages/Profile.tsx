@@ -211,8 +211,11 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Cloudinary unsigned upload preset (replace with your preset if needed)
-  const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`;
-  const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
+  const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
+    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  }/image/upload`;
+  const UPLOAD_PRESET =
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -256,13 +259,19 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
-        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+        <button
+          onClick={onClose}
+          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+        >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <h3 className="font-semibold text-gray-900">Edit Profile</h3>
       </div>
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="flex-1 overflow-y-auto px-4 py-6 space-y-6"
+      >
         {/* Cover Image */}
         <div className="relative h-40 rounded-2xl overflow-hidden mb-8">
           <img src={cover} alt="Cover" className="w-full h-full object-cover" />
@@ -275,12 +284,22 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
           >
             <Camera className="w-5 h-5" />
           </button>
-          <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={e => handleImageUpload(e, "cover")}/>
+          <input
+            type="file"
+            accept="image/*"
+            ref={coverInputRef}
+            className="hidden"
+            onChange={(e) => handleImageUpload(e, "cover")}
+          />
         </div>
         {/* Avatar */}
         <div className="flex justify-center -mt-20 mb-4">
           <div className="relative">
-            <img src={avatar} alt="Avatar" className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl" />
+            <img
+              src={avatar}
+              alt="Avatar"
+              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+            />
             <button
               type="button"
               onClick={() => {
@@ -290,29 +309,68 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
             >
               <Edit3 className="w-4 h-4" />
             </button>
-            <input type="file" accept="image/*" ref={avatarInputRef} className="hidden" onChange={e => handleImageUpload(e, "avatar")}/>
+            <input
+              type="file"
+              accept="image/*"
+              ref={avatarInputRef}
+              className="hidden"
+              onChange={(e) => handleImageUpload(e, "avatar")}
+            />
           </div>
         </div>
         {/* Fields */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            <input type="text" className="w-full border rounded-lg px-3 py-2 mt-1" value={fullName} onChange={e => setFullName(e.target.value)} required />
+            <label className="block text-sm font-medium text-gray-700">
+              Full Name
+            </label>
+            <input
+              type="text"
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Bio</label>
-            <textarea className="w-full border rounded-lg px-3 py-2 mt-1" value={bio} onChange={e => setBio(e.target.value)} maxLength={200} />
+            <label className="block text-sm font-medium text-gray-700">
+              Bio
+            </label>
+            <textarea
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              maxLength={200}
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Website</label>
-            <input type="url" className="w-full border rounded-lg px-3 py-2 mt-1" value={website} onChange={e => setWebsite(e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700">
+              Website
+            </label>
+            <input
+              type="url"
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Location</label>
-            <input type="text" className="w-full border rounded-lg px-3 py-2 mt-1" value={location} onChange={e => setLocation(e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700">
+              Location
+            </label>
+            <input
+              type="text"
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
           </div>
         </div>
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transition-all">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 rounded-xl font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transition-all"
+        >
           {loading ? "Saving..." : "Save Changes"}
         </button>
       </form>
@@ -409,19 +467,19 @@ function Profile() {
   ];
 
   // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-          <p className="text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+  //         <p className="text-gray-600">Loading profile...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Error state
-  if (error || !profileUser) {
+  if (error || (!profileUser && !isLoading)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
@@ -456,25 +514,33 @@ function Profile() {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img
-              src={profileUser.avatar}
+              src={
+                profileUser?.avatar ||
+                "https://randomuser.me/api/portraits/men/1.jpg"
+              }
               alt="Profile"
               className="w-10 h-10 rounded-xl object-cover"
             />
             <div>
               <h1 className="font-bold text-lg text-gray-800">
-                {profileUser.fullName}
+                {profileUser?.fullName || "..."}
               </h1>
               <p className="text-sm text-gray-600">
-                {formatNumber(profileUser.postCount || 0)} posts
+                {formatNumber(profileUser?.postCount || 0)} posts
               </p>
             </div>
           </div>
           {/* Show Edit Profile button for current user */}
-          {currentUser && currentUser._id === profileUser._id && (
-            <button onClick={() => setShowEdit(true)} className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all">
-              Edit Profile
-            </button>
-          )}
+          {currentUser &&
+            profileUser &&
+            currentUser._id === profileUser._id && (
+              <button
+                onClick={() => setShowEdit(true)}
+                className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all"
+              >
+                Edit Profile
+              </button>
+            )}
         </div>
       </div>
 
@@ -483,7 +549,7 @@ function Profile() {
         <div className="relative -mt-4">
           <div className="h-48 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-2xl overflow-hidden">
             <img
-              src={defaultCoverImage}
+              src={profileUser?.cover || defaultCoverImage}
               alt="Cover"
               className="w-full h-full object-cover mix-blend-overlay opacity-80"
             />
@@ -497,7 +563,10 @@ function Profile() {
             <div className="flex items-end justify-between -mt-16 mb-4">
               <div className="relative">
                 <img
-                  src={profileUser.avatar}
+                  src={
+                    profileUser?.avatar ||
+                    "https://randomuser.me/api/portraits/men/1.jpg"
+                  }
                   alt="Profile"
                   className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
                 />
@@ -506,17 +575,17 @@ function Profile() {
                 </button>
               </div>
               <div className="flex space-x-3 mt-16">
-                {currentUser && currentUser._id !== profileUser._id && (
-                <button
+                {currentUser && currentUser._id !== profileUser?._id && (
+                  <button
                     onClick={handleFollow}
-                  className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                    isFollowing
-                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                      : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
-                  }`}
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </button>
+                    className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                      isFollowing
+                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
+                    }`}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </button>
                 )}
                 <button className="px-6 py-2 rounded-xl font-medium bg-white/70 backdrop-blur-sm text-gray-800 border border-gray-200 hover:bg-white transition-all">
                   Message
@@ -527,30 +596,30 @@ function Profile() {
             <div className="space-y-3">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
-                  <span>{profileUser.fullName}</span>
-                  {profileUser.isVerified && (
-                  <Crown className="w-6 h-6 text-yellow-500" />
+                  <span>{profileUser?.fullName || "..."}</span>
+                  {profileUser?.isVerified && (
+                    <Crown className="w-6 h-6 text-yellow-500" />
                   )}
                 </h2>
-                <p className="text-gray-600">@{profileUser.username}</p>
+                <p className="text-gray-600">@{profileUser?.username}</p>
               </div>
 
-              {profileUser.bio && (
+              {profileUser?.bio && (
                 <p className="text-gray-700 leading-relaxed">
                   {profileUser.bio}
                 </p>
               )}
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                {profileUser.location && (
-                <div className="flex items-center space-x-1">
-                  <MapPin className="w-4 h-4" />
+                {profileUser?.location && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="w-4 h-4" />
                     <span>{profileUser.location}</span>
-                </div>
+                  </div>
                 )}
-                {profileUser.website && (
-                <div className="flex items-center space-x-1">
-                  <ExternalLink className="w-4 h-4" />
+                {profileUser?.website && (
+                  <div className="flex items-center space-x-1">
+                    <ExternalLink className="w-4 h-4" />
                     <a
                       href={
                         profileUser.website.startsWith("http")
@@ -562,14 +631,14 @@ function Profile() {
                       className="text-blue-500 hover:underline"
                     >
                       {profileUser.website}
-                  </a>
-                </div>
+                    </a>
+                  </div>
                 )}
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
                   <span>
                     Joined{" "}
-                    {new Date(profileUser.createdAt).toLocaleDateString(
+                    {new Date(profileUser?.createdAt || "").toLocaleDateString(
                       "en-US",
                       {
                         year: "numeric",
@@ -583,19 +652,19 @@ function Profile() {
               <div className="flex space-x-6">
                 <div className="text-center">
                   <div className="font-bold text-xl text-gray-800">
-                    {formatNumber(profileUser.followingCount || 0)}
+                    {formatNumber(profileUser?.followingCount || 0)}
                   </div>
                   <div className="text-sm text-gray-600">Following</div>
                 </div>
                 <div className="text-center">
                   <div className="font-bold text-xl text-gray-800">
-                    {formatNumber(profileUser.followerCount || 0)}
+                    {formatNumber(profileUser?.followerCount || 0)}
                   </div>
                   <div className="text-sm text-gray-600">Followers</div>
                 </div>
                 <div className="text-center">
                   <div className="font-bold text-xl text-gray-800">
-                    {formatNumber(profileUser.postCount || 0)}
+                    {formatNumber(profileUser?.postCount || 0)}
                   </div>
                   <div className="text-sm text-gray-600">Posts</div>
                 </div>
@@ -683,7 +752,7 @@ function Profile() {
       {/* Edit Profile Overlay */}
       {showEdit && (
         <EditProfile
-          user={profileUser}
+          user={profileUser || {}}
           onClose={() => setShowEdit(false)}
           onSave={async (data) => {
             await apiService.updateProfile(data);
