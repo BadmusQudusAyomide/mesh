@@ -472,7 +472,6 @@ function Home() {
               onAddComment={handleAddComment}
               commentInputs={commentInputs}
               setCommentInputs={setCommentInputs}
-              currentUserId={user?._id || null}
             />
           </div>
           <SidebarRight

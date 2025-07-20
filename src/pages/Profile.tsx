@@ -61,7 +61,6 @@ interface PostProps {
   onAddComment: (postId: string, text: string) => void;
   commentInput: string;
   setCommentInput: (val: string) => void;
-  currentUserId: string | null;
 }
 
 const Post = ({
@@ -72,7 +71,6 @@ const Post = ({
   onAddComment,
   commentInput,
   setCommentInput,
-  currentUserId,
 }: PostProps) => (
   <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-start space-x-4 mb-4">
@@ -493,7 +491,7 @@ function Profile() {
       const response = await apiService.followUser(profileUser._id);
       setIsFollowing(response.isFollowing);
     } catch {
-      console.error("Error following user:", err);
+      console.error("Error following user");
     }
   };
 
@@ -812,7 +810,6 @@ function Profile() {
                       [post.id]: val,
                     }))
                   }
-                  currentUserId={currentUser?._id || null}
                 />
               ))}
             </div>
@@ -856,7 +853,6 @@ function Profile() {
                         [post.id]: val,
                       }))
                     }
-                    currentUserId={currentUser?._id || null}
                   />
                 ))}
             </div>
