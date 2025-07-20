@@ -131,6 +131,21 @@ class ApiService {
       method: 'GET',
     });
   }
+
+  // Create a new post
+  async createPost(data: { content: string; image?: string }): Promise<any> {
+    return this.request<any>("/posts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Get all posts
+  async getPosts(): Promise<any> {
+    return this.request<any>("/posts", {
+      method: "GET",
+    });
+  }
 }
 
 // Create and export a singleton instance
