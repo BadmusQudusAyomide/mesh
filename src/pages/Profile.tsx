@@ -16,7 +16,6 @@ import {
   MoreHorizontal,
   Camera,
   Edit3,
-  Loader2,
   ArrowLeft,
 } from "lucide-react";
 
@@ -24,9 +23,10 @@ import {
 const defaultCoverImage =
   "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop";
 
+// Remove the first (incorrect) PostProps interface and update initialPosts to use string ids
 const initialPosts = [
   {
-    id: 1,
+    id: "1",
     user: "Badmus Adebayo",
     username: "badmus",
     avatar: "https://randomuser.me/api/portraits/men/1.jpg",
@@ -47,7 +47,7 @@ const initialPosts = [
     category: "Tech",
   },
   {
-    id: 2,
+    id: "2",
     user: "Badmus Adebayo",
     username: "badmus",
     avatar: "https://randomuser.me/api/portraits/men/1.jpg",
@@ -64,7 +64,7 @@ const initialPosts = [
     category: "Blockchain",
   },
   {
-    id: 3,
+    id: "3",
     user: "Badmus Adebayo",
     username: "badmus",
     avatar: "https://randomuser.me/api/portraits/men/1.jpg",
@@ -84,9 +84,10 @@ const initialPosts = [
   },
 ];
 
+// Only keep this PostProps interface, update id and handler types to string
 interface PostProps {
   post: {
-    id: number;
+    id: string;
     user: string;
     username: string;
     avatar: string;
@@ -105,8 +106,8 @@ interface PostProps {
     category?: string;
   };
   formatNumber: (num: number) => string;
-  handleLike: (postId: number) => void;
-  handleBookmark: (postId: number) => void;
+  handleLike: (postId: string) => void;
+  handleBookmark: (postId: string) => void;
 }
 
 const Post = ({
@@ -436,7 +437,8 @@ function Profile() {
     return num.toString();
   };
 
-  const handleLike = (postId: number): void => {
+  // Update handleLike and handleBookmark to use string
+  const handleLike = (postId: string): void => {
     setPosts(
       posts.map((post) =>
         post.id === postId
@@ -450,7 +452,7 @@ function Profile() {
     );
   };
 
-  const handleBookmark = (postId: number): void => {
+  const handleBookmark = (postId: string): void => {
     setPosts(
       posts.map((post) =>
         post.id === postId
@@ -750,9 +752,9 @@ function Profile() {
         </div>
       </div>
       {/* Edit Profile Overlay */}
-      {showEdit && (
+      {showEdit && profileUser && (
         <EditProfile
-          user={profileUser || {}}
+          user={profileUser}
           onClose={() => setShowEdit(false)}
           onSave={async (data) => {
             await apiService.updateProfile(data);
