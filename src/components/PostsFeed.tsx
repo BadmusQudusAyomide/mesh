@@ -1,7 +1,7 @@
 import Post from "./Post";
 
 interface PostData {
-  id: number;
+  id: string;
   user: string;
   username: string;
   avatar: string;
@@ -23,8 +23,8 @@ interface PostData {
 interface PostsFeedProps {
   posts: PostData[];
   formatNumber: (num: number) => string;
-  handleLike: (postId: number) => void;
-  handleBookmark: (postId: number) => void;
+  handleLike: (postId: string) => void;
+  handleBookmark: (postId: string) => void;
 }
 
 const PostsFeed = ({
