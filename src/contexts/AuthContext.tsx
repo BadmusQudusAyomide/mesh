@@ -1,32 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { apiService } from "../lib/api";
 import type { User } from "../types";
+import { AuthContext } from "./AuthContextHelpers";
+import type { AuthContextType } from "./AuthContextHelpers";
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (
-    username: string,
-    email: string,
-    password: string,
-    fullName: string
-  ) => Promise<void>;
-  logout: () => Promise<void>;
-  updateUser: (userData: Partial<User>) => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+// AuthContext and useAuth are now in AuthContextHelpers.tsx
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -68,6 +47,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiService.login({ email, password });
       apiService.setToken(response.token);
       setUser(response.user);
+      if (response.user && response.user._id) {
+        localStorage.setItem("userId", response.user._id);
+      }
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -89,6 +71,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       apiService.setToken(response.token);
       setUser(response.user);
+      if (response.user && response.user._id) {
+        localStorage.setItem("userId", response.user._id);
+      }
     } catch (error) {
       console.error("Registration failed:", error);
       throw error;
@@ -103,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       apiService.clearToken();
       setUser(null);
+      localStorage.removeItem("userId");
     }
   };
 
