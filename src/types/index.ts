@@ -74,6 +74,7 @@ export interface Post {
   image?: string;
   likes: string[];
   comments: Array<{
+    _id: string; // <-- Added this line to match backend
     user: {
       _id: string;
       fullName: string;
