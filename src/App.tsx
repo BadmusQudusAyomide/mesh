@@ -11,6 +11,7 @@ import Signup from "./pages/Signup";
 import { usePreloader } from "./hooks/usePreloader";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/ui/toast";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import SuccessPage from "./pages/SuccessPage";
@@ -53,98 +54,100 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
-          {/* Preloading Progress Indicator */}
-          {isPreloading && (
-            <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-2 text-sm">
-              Loading content... {Math.round(preloadProgress)}%
-            </div>
-          )}
+        <NotificationProvider>
+          <Router>
+            {/* Preloading Progress Indicator */}
+            {isPreloading && (
+              <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-2 text-sm">
+                Loading content... {Math.round(preloadProgress)}%
+              </div>
+            )}
 
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/signup"
-              element={
-                <PublicRoute>
-                  <Signup />
-                </PublicRoute>
-              }
-            />
-            <Route path="/success" element={<SuccessPage />} />
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile/:username"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inbox"
-              element={
-                <ProtectedRoute>
-                  <Inbox />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat/:username"
-              element={
-                <ProtectedRoute>
-                  <Chat />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/explore"
-              element={
-                <ProtectedRoute>
-                  <Explore />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/alert"
-              element={
-                <ProtectedRoute>
-                  <Alert />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/connection"
-              element={
-                <ProtectedRoute>
-                  <ConnectionTest />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/signup"
+                element={
+                  <PublicRoute>
+                    <Signup />
+                  </PublicRoute>
+                }
+              />
+              <Route path="/success" element={<SuccessPage />} />
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile/:username"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inbox"
+                element={
+                  <ProtectedRoute>
+                    <Inbox />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat/:username"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/explore"
+                element={
+                  <ProtectedRoute>
+                    <Explore />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/alert"
+                element={
+                  <ProtectedRoute>
+                    <Alert />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/connection"
+                element={
+                  <ProtectedRoute>
+                    <ConnectionTest />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Router>
+        </NotificationProvider>
       </ToastProvider>
     </AuthProvider>
   );

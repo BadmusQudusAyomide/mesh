@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { useAuth } from "../contexts/AuthContext";
+import { API_BASE_URL } from "../config";
+import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
-import type { User } from "../types";
+import type { User, Post, FeedPost } from "../types";
 import {
   Crown,
   MapPin,
@@ -18,43 +19,15 @@ import {
   Edit3,
   ArrowLeft,
 } from "lucide-react";
+import { io as socketIOClient, Socket } from "socket.io-client";
+import PostsFeed from "../components/PostsFeed";
 
 // Default cover image
 const defaultCoverImage =
   "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop";
 
-// Only keep this PostProps interface, update id and handler types to string
 interface PostProps {
-  post: {
-    id: string;
-    user: string;
-    username: string;
-    avatar: string;
-    content: string;
-    time: string;
-    image?: string;
-    likes: number;
-    comments: number;
-    shares: number;
-    views: number;
-    isLiked: boolean;
-    isBookmarked: boolean;
-    isVerified: boolean;
-    engagement?: number;
-    trending?: boolean;
-    category?: string;
-    commentList: Array<{
-      user: {
-        _id: string;
-        fullName: string;
-        username: string;
-        avatar: string;
-        isVerified: boolean;
-      };
-      text: string;
-      createdAt: string;
-    }>;
-  };
+  post: FeedPost;
   formatNumber: (num: number) => string;
   handleLike: (postId: string) => void;
   handleBookmark: (postId: string) => void;
@@ -166,8 +139,8 @@ const Post = ({
         </button>
       </form>
       <div className="space-y-2">
-        {post.commentList.map((comment, idx) => (
-          <div key={idx} className="flex items-start gap-2">
+        {post.commentList.map((comment) => (
+          <div key={comment.id} className="flex items-start gap-2">
             <img
               src={comment.user.avatar}
               alt={comment.user.fullName}
@@ -176,9 +149,6 @@ const Post = ({
             <div>
               <span className="font-semibold text-sm">
                 {comment.user.fullName}
-              </span>{" "}
-              <span className="text-xs text-gray-500">
-                @{comment.user.username}
               </span>
               <p className="text-gray-700 text-sm mb-0.5">{comment.text}</p>
               <span className="text-xs text-gray-400">
@@ -216,7 +186,6 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Cloudinary unsigned upload preset (replace with your preset if needed)
   const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${
     import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
   }/image/upload`;
@@ -263,7 +232,6 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
         <button
           onClick={onClose}
@@ -273,12 +241,10 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
         </button>
         <h3 className="font-semibold text-gray-900">Edit Profile</h3>
       </div>
-      {/* Form */}
       <form
         onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto px-4 py-6 space-y-6"
       >
-        {/* Cover Image */}
         <div className="relative h-40 rounded-2xl overflow-hidden mb-8">
           <img src={cover} alt="Cover" className="w-full h-full object-cover" />
           <button
@@ -298,7 +264,6 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
             onChange={(e) => handleImageUpload(e, "cover")}
           />
         </div>
-        {/* Avatar */}
         <div className="flex justify-center -mt-20 mb-4">
           <div className="relative">
             <img
@@ -324,7 +289,6 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
             />
           </div>
         </div>
-        {/* Fields */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -391,39 +355,7 @@ function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
   const [darkMode] = useState(false);
-  // Define the type for posts state
-  interface ProfilePost {
-    id: string;
-    user: string;
-    username: string;
-    avatar: string;
-    content: string;
-    time: string;
-    image?: string;
-    likes: number;
-    comments: number;
-    shares: number;
-    views: number;
-    isLiked: boolean;
-    isBookmarked: boolean;
-    isVerified: boolean;
-    engagement?: number;
-    trending?: boolean;
-    category?: string;
-    commentList: Array<{
-      user: {
-        _id: string;
-        fullName: string;
-        username: string;
-        avatar: string;
-        isVerified: boolean;
-      };
-      text: string;
-      createdAt: string;
-    }>;
-  }
-  // Use the explicit type for posts state
-  const [posts, setPosts] = useState<ProfilePost[]>([]); // Start with empty array
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -433,7 +365,6 @@ function Profile() {
     [postId: string]: string;
   }>({});
 
-  // Fetch profile data and user posts
   useEffect(() => {
     const fetchProfile = async () => {
       if (!username) {
@@ -450,7 +381,6 @@ function Profile() {
         setProfileUser(response.user);
         setIsFollowing(response.isFollowing);
 
-        // Fetch posts for this user
         const postsRes = await apiService.getPostsByUsername(username);
         setPosts(
           postsRes.posts.map((post) => ({
@@ -462,16 +392,25 @@ function Profile() {
             time: new Date(post.createdAt).toLocaleString(),
             image: post.image,
             likes: post.likes.length,
-            comments: post.comments.length, // always from backend
+            comments: post.comments.length,
             shares: 0,
             views: 0,
-            isLiked: currentUser ? post.likes.includes(currentUser._id) : false, // always from backend
+            isLiked: currentUser ? post.likes.includes(currentUser._id) : false,
             isBookmarked: false,
             isVerified: post.user.isVerified,
-            engagement: undefined,
+            engagement: 0,
             trending: undefined,
             category: undefined,
-            commentList: post.comments, // always from backend
+            commentList: (post.comments || []).map((c) => ({
+              id: c._id,
+              user: {
+                id: c.user._id,
+                fullName: c.user.fullName,
+                avatar: c.user.avatar,
+              },
+              text: c.text,
+              createdAt: c.createdAt,
+            })),
           }))
         );
       } catch {
@@ -482,6 +421,38 @@ function Profile() {
     };
 
     fetchProfile();
+    const SOCKET_URL =
+      import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
+    const socket: Socket = socketIOClient(SOCKET_URL);
+    socket.on("postUpdated", (updatedPost: Post) => {
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === updatedPost._id
+            ? {
+                ...post,
+                likes: updatedPost.likes.length,
+                isLiked: currentUser
+                  ? updatedPost.likes.includes(currentUser._id)
+                  : false,
+                comments: updatedPost.comments.length,
+                commentList: (updatedPost.comments || []).map((c) => ({
+                  id: c._id,
+                  user: {
+                    id: c.user._id,
+                    fullName: c.user.fullName,
+                    avatar: c.user.avatar,
+                  },
+                  text: c.text,
+                  createdAt: c.createdAt,
+                })),
+              }
+            : post
+        )
+      );
+    });
+    return () => {
+      socket.disconnect();
+    };
   }, [username, currentUser]);
 
   const handleFollow = async () => {
@@ -501,7 +472,6 @@ function Profile() {
     return num.toString();
   };
 
-  // Like handler
   const handleLike = async (postId: string) => {
     try {
       const res = await apiService.likePost(postId);
@@ -513,7 +483,16 @@ function Profile() {
                 isLiked: res.liked,
                 likes: res.likesCount,
                 comments: res.post.comments.length,
-                commentList: res.post.comments,
+                commentList: (res.post.comments || []).map((c) => ({
+                  id: c._id,
+                  user: {
+                    id: c.user._id,
+                    fullName: c.user.fullName,
+                    avatar: c.user.avatar,
+                  },
+                  text: c.text,
+                  createdAt: c.createdAt,
+                })),
               }
             : post
         )
@@ -523,7 +502,6 @@ function Profile() {
     }
   };
 
-  // Comment handler
   const handleAddComment = async (postId: string, text: string) => {
     try {
       const res = await apiService.addComment(postId, text);
@@ -533,7 +511,16 @@ function Profile() {
             ? {
                 ...post,
                 comments: res.post.comments.length,
-                commentList: res.post.comments,
+                commentList: (res.post.comments || []).map((c) => ({
+                  id: c._id,
+                  user: {
+                    id: c.user._id,
+                    fullName: c.user.fullName,
+                    avatar: c.user.avatar,
+                  },
+                  text: c.text,
+                  createdAt: c.createdAt,
+                })),
               }
             : post
         )
@@ -556,23 +543,10 @@ function Profile() {
 
   const tabs = [
     { id: "posts", label: "Posts", count: profileUser?.postCount || 0 },
-    { id: "media", label: "Media", count: 0 }, // TODO: Implement media count
-    { id: "likes", label: "Likes", count: 0 }, // TODO: Implement likes count
+    { id: "media", label: "Media", count: 0 },
+    { id: "likes", label: "Likes", count: 0 },
   ];
 
-  // Loading state
-  // if (isLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
-  //       <div className="text-center">
-  //         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-  //         <p className="text-gray-600">Loading profile...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // Error state
   if (error || (!profileUser && !isLoading)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -603,7 +577,6 @@ function Profile() {
         darkMode={darkMode}
         setDarkMode={() => {}}
       />
-      {/* Header with Settings */}
       <div className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-white/20">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -624,7 +597,6 @@ function Profile() {
               </p>
             </div>
           </div>
-          {/* Show Edit Profile button for current user */}
           {currentUser &&
             profileUser &&
             currentUser._id === profileUser._id && (
@@ -639,7 +611,6 @@ function Profile() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4">
-        {/* Cover Photo & Profile Section */}
         <div className="relative -mt-4">
           <div className="h-48 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-2xl overflow-hidden">
             <img
@@ -652,7 +623,6 @@ function Profile() {
             </button>
           </div>
 
-          {/* Profile Info */}
           <div className="relative px-6 pb-6">
             <div className="flex items-end justify-between -mt-16 mb-4">
               <div className="relative">
@@ -767,7 +737,6 @@ function Profile() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
         <div className="sticky top-24 z-40 backdrop-blur-lg bg-white/80 border-b border-gray-200/50 mb-6">
           <div className="flex space-x-8">
             {tabs.map((tab) => (
@@ -791,28 +760,17 @@ function Profile() {
           </div>
         </div>
 
-        {/* Posts Content */}
         <div className="pb-8">
           {activeTab === "posts" && (
-            <div className="space-y-6">
-              {posts.map((post) => (
-                <Post
-                  key={post.id}
-                  post={post}
-                  formatNumber={formatNumber}
-                  handleLike={handleLike}
-                  handleBookmark={handleBookmark}
-                  onAddComment={handleAddComment}
-                  commentInput={commentInputs[post.id] || ""}
-                  setCommentInput={(val) =>
-                    setCommentInputs((inputs) => ({
-                      ...inputs,
-                      [post.id]: val,
-                    }))
-                  }
-                />
-              ))}
-            </div>
+            <PostsFeed
+              posts={posts}
+              formatNumber={formatNumber}
+              handleLike={handleLike}
+              handleBookmark={handleBookmark}
+              onAddComment={handleAddComment}
+              commentInputs={commentInputs}
+              setCommentInputs={setCommentInputs}
+            />
           )}
 
           {activeTab === "media" && (
@@ -859,7 +817,6 @@ function Profile() {
           )}
         </div>
       </div>
-      {/* Edit Profile Overlay */}
       {showEdit && profileUser && (
         <EditProfile
           user={profileUser}

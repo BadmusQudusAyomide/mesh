@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContextHelpers";
 import { useToast } from "../components/ui/toast";
 
 export default function Signup() {

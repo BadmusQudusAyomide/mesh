@@ -5,9 +5,10 @@ import type {
   AuthResponse, 
   HealthCheckResponse, 
   ProfileUpdateResponse, 
-  LogoutResponse 
+  LogoutResponse, 
+  Notification, 
+  Post 
 } from '../types';
-import type { Post } from '../types';
 import { API_BASE_URL } from '../config';
 
 // Helper function to handle API responses
@@ -168,6 +169,11 @@ class ApiService {
       method: "POST",
       body: JSON.stringify({ text }),
     });
+  }
+
+  // Get notifications for the current user
+  async getNotifications(): Promise<{ notifications: Notification[] }> {
+    return this.request<{ notifications: Notification[] }>("/posts/notifications", { method: "GET" });
   }
 }
 

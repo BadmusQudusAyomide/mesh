@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle, Home, User } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { CheckCircle, Home, User } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { useAuth } from "../contexts/AuthContextHelpers";
 
 interface LocationState {
-  type: 'login' | 'signup';
+  type: "login" | "signup";
   user?: {
     username: string;
     fullName: string;
@@ -20,19 +20,19 @@ const SuccessPage = () => {
   const [countdown, setCountdown] = useState(5);
 
   const state = location.state as LocationState;
-  const isLogin = state?.type === 'login';
-  const isSignup = state?.type === 'signup';
+  const isLogin = state?.type === "login";
+  const isSignup = state?.type === "signup";
 
   useEffect(() => {
     if (!isLogin && !isSignup) {
-      navigate('/');
+      navigate("/");
       return;
     }
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          navigate('/home');
+          navigate("/home");
           return 0;
         }
         return prev - 1;
@@ -43,11 +43,11 @@ const SuccessPage = () => {
   }, [isLogin, isSignup, navigate]);
 
   const handleGoHome = () => {
-    navigate('/home');
+    navigate("/home");
   };
 
   const handleGoProfile = () => {
-    navigate('/profile');
+    navigate("/profile");
   };
 
   if (!isLogin && !isSignup) {
@@ -66,21 +66,20 @@ const SuccessPage = () => {
 
         {/* Success Message */}
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          {isSignup ? 'Welcome to Mesh!' : 'Welcome Back!'}
+          {isSignup ? "Welcome to Mesh!" : "Welcome Back!"}
         </h1>
-        
+
         <p className="text-lg text-gray-600 mb-2">
-          {isSignup 
-            ? 'Your account has been created successfully!' 
-            : 'You have been logged in successfully!'
-          }
+          {isSignup
+            ? "Your account has been created successfully!"
+            : "You have been logged in successfully!"}
         </p>
 
         {user && (
           <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
             <div className="flex items-center space-x-3">
-              <img 
-                src={user.avatar} 
+              <img
+                src={user.avatar}
                 alt={user.fullName}
                 className="w-12 h-12 rounded-full"
               />
@@ -94,7 +93,7 @@ const SuccessPage = () => {
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button 
+          <Button
             onClick={handleGoHome}
             className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
           >
@@ -102,7 +101,7 @@ const SuccessPage = () => {
             Go to Home
           </Button>
 
-          <Button 
+          <Button
             onClick={handleGoProfile}
             variant="outline"
             className="w-full h-12"
@@ -120,7 +119,7 @@ const SuccessPage = () => {
         {/* Additional Info */}
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">
-            {isSignup ? 'What\'s Next?' : 'Ready to Connect?'}
+            {isSignup ? "What's Next?" : "Ready to Connect?"}
           </h3>
           <ul className="text-sm text-blue-700 space-y-1">
             {isSignup ? (
@@ -143,4 +142,4 @@ const SuccessPage = () => {
   );
 };
 
-export default SuccessPage; 
+export default SuccessPage;

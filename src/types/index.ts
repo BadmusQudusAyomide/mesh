@@ -116,4 +116,14 @@ export interface FeedPost {
     text: string;
     createdAt: string;
   }>;
+}
+
+export interface Notification {
+  _id: string;
+  type: string;
+  from: { fullName: string; avatar: string; username: string };
+  post: { content: string; image?: string };
+  text: string;
+  isRead: boolean;
+  createdAt: string;
 } 

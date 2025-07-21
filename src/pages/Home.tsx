@@ -1,14 +1,19 @@
 import { useState, useRef, useEffect } from "react";
+import { io as socketIOClient, Socket } from "socket.io-client";
 import Navigation from "../components/Navigation";
 import SidebarLeft from "../components/SidebarLeft";
 import SidebarRight from "../components/SidebarRight";
 import Stories from "../components/Stories";
 import CreatePost from "../components/CreatePost";
 import PostsFeed from "../components/PostsFeed";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContextHelpers";
 import "../App.css";
 import { apiService } from "../lib/api";
+import { API_BASE_URL } from "../config";
 import type { Post as BackendPost, FeedPost } from "../types";
+
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
 
 // Type for backend comment structure
 type BackendComment = {
@@ -224,6 +229,28 @@ function Home() {
       }
     };
     fetchPosts();
+    // Socket.IO real-time updates
+    const socket: Socket = socketIOClient(SOCKET_URL);
+    socket.on("postUpdated", (updatedPost: BackendPost) => {
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === updatedPost._id
+            ? {
+                ...post,
+                likes: updatedPost.likes.length,
+                isLiked: user ? updatedPost.likes.includes(user._id) : false,
+                comments: updatedPost.comments.length,
+                commentList: (updatedPost.comments as BackendComment[]).map(
+                  mapBackendCommentToFeedComment
+                ),
+              }
+            : post
+        )
+      );
+    });
+    return () => {
+      socket.disconnect();
+    };
   }, [user]);
 
   const handlePostSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

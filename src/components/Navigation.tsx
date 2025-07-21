@@ -11,8 +11,9 @@ import {
   LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContextHelpers";
 import { useToast } from "../components/ui/toast";
+import { useNotifications } from "../contexts/NotificationContextHelpers";
 
 interface NavigationProps {
   activeTab: string;
@@ -33,6 +34,7 @@ const Navigation = ({
   const { logout, user } = useAuth();
   const { addToast } = useToast();
   const isChatPage = location.pathname.startsWith("/chat/");
+  const { unreadCount } = useNotifications();
 
   const handleLogout = async () => {
     try {
@@ -93,9 +95,11 @@ const Navigation = ({
               }`}
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                  {unreadCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab("messages")}
@@ -189,9 +193,11 @@ const Navigation = ({
             >
               <Bell className="w-7 h-7 mb-1" />
               <span className="text-xs">Alerts</span>
-              <span className="absolute top-1 right-4 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-4 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
             <Link
               to="/inbox"
