@@ -10,9 +10,7 @@ import {
   Video,
   MoreVertical,
   Smile,
-  Paperclip,
   CheckCheck,
-  Circle,
   Image,
   Mic,
   Plus,
@@ -56,7 +54,7 @@ function Chat() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatUser, setChatUser] = useState<ChatUser | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);

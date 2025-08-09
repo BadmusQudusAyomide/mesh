@@ -9,7 +9,6 @@ import {
   Plus,
   MoreHorizontal,
   CheckCheck,
-  Clock,
   Users,
   Sparkles,
 } from "lucide-react";
@@ -39,7 +38,7 @@ function Inbox() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("home");
-  const [darkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
@@ -125,6 +124,7 @@ function Inbox() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         darkMode={darkMode}
+        setDarkMode={setDarkMode}
       />
       
       {/* Header */}
