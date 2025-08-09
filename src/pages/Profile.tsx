@@ -663,7 +663,7 @@ function Profile() {
                 </button>
               </div>
               <div className="flex space-x-3 mt-16">
-                {currentUser && currentUser._id !== profileUser?._id && (
+                {currentUser && profileUser && currentUser._id !== profileUser._id && (
                   <button
                     onClick={() => handleFollow(profileUser._id)}
                     className={`px-6 py-2 rounded-xl font-medium transition-all ${
