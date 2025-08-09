@@ -4,7 +4,7 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
 import Chat from "./pages/Chat";
-import Explore from "./pages/Explore";
+
 import Alert from "./pages/Alert";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -121,14 +121,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/explore"
-                element={
-                  <ProtectedRoute>
-                    <Explore />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/alert"
                 element={

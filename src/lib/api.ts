@@ -13,16 +13,22 @@ import { API_BASE_URL } from '../config';
 
 // Helper function to handle API responses
 const handleResponse = async (response: Response) => {
-  const data = await response.json();
-  
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
   if (!response.ok) {
     // For auth errors, provide more specific error messages
     if (response.status === 401) {
-      throw new Error(data.error || 'Authentication failed');
+      throw new Error((data && data.error) || data || 'Authentication failed');
     }
-    throw new Error(data.error || 'Something went wrong');
+    throw new Error((data && data.error) || data || 'Something went wrong');
   }
-  
+
   return data;
 };
 
@@ -116,7 +122,7 @@ class ApiService {
   }
 
   async followUser(userId: string): Promise<{ message: string; isFollowing: boolean }> {
-    return this.request<{ message: string; isFollowing: boolean }>(`/auth/follow/${userId}`, {
+    return this.request<{ message: string; isFollowing: boolean }>(`/users/${userId}/follow`, {
       method: 'POST',
     });
   }

@@ -351,7 +351,7 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
 function Profile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState("posts");
   const [darkMode] = useState(false);
@@ -385,6 +385,7 @@ function Profile() {
         setPosts(
           postsRes.posts.map((post) => ({
             id: post._id,
+            authorId: post.user._id,
             user: post.user.fullName,
             username: post.user.username,
             avatar: post.user.avatar,
@@ -455,12 +456,35 @@ function Profile() {
     };
   }, [username, currentUser]);
 
-  const handleFollow = async () => {
-    if (!profileUser || !currentUser) return;
+  const handleFollow = async (userIdToFollow: string) => {
+    if (!currentUser || !profileUser) return;
 
     try {
-      const response = await apiService.followUser(profileUser._id);
-      setIsFollowing(response.isFollowing);
+      const response = await apiService.followUser(userIdToFollow);
+
+      // Update the profile page's state if the action is for the profile user
+      if (userIdToFollow === profileUser._id) {
+        setIsFollowing(response.isFollowing);
+        setProfileUser(prevUser => {
+          if (!prevUser) return null;
+          return {
+            ...prevUser,
+            followerCount: response.isFollowing
+              ? (prevUser.followerCount || 0) + 1
+              : Math.max(0, (prevUser.followerCount || 0) - 1),
+          };
+        });
+      }
+
+      // Update the global user context for app-wide consistency
+      if (updateUser) {
+        const currentFollowing = currentUser.following || [];
+        const newFollowing = response.isFollowing
+          ? [...currentFollowing, userIdToFollow]
+          : currentFollowing.filter(id => id.toString() !== userIdToFollow.toString());
+        updateUser({ ...currentUser, following: newFollowing });
+      }
+
     } catch {
       console.error("Error following user");
     }
@@ -641,7 +665,7 @@ function Profile() {
               <div className="flex space-x-3 mt-16">
                 {currentUser && currentUser._id !== profileUser?._id && (
                   <button
-                    onClick={handleFollow}
+                    onClick={() => handleFollow(profileUser._id)}
                     className={`px-6 py-2 rounded-xl font-medium transition-all ${
                       isFollowing
                         ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
@@ -770,6 +794,7 @@ function Profile() {
               onAddComment={handleAddComment}
               commentInputs={commentInputs}
               setCommentInputs={setCommentInputs}
+              onFollow={handleFollow} // Pass the generic follow handler
             />
           )}
 
