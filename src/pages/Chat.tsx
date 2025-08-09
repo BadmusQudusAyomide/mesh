@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
-import socketIOClient, { Socket } from "socket.io-client";
+import socketIOClient from "socket.io-client";
 import {
   ArrowLeft,
   Send,
