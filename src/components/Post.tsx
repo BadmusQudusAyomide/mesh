@@ -1,23 +1,25 @@
 import {
-  MoreHorizontal,
-  Heart,
-  MessageCircle,
-  Share2,
-  Eye,
-  Flag,
-  UserMinus,
-  Link,
-  Copy,
-  VolumeX,
-  Trash2,
-  Edit3,
-  Smile,
-  ArrowLeft,
-} from "lucide-react";
+  HeartIcon,
+  ChatBubbleLeftEllipsisIcon,
+  ArrowUpTrayIcon,
+  EyeIcon,
+  UserPlusIcon,
+  FaceSmileIcon,
+  ArrowLeftIcon,
+  EllipsisHorizontalIcon,
+  FlagIcon,
+  UserMinusIcon,
+  SpeakerXMarkIcon,
+  DocumentDuplicateIcon,
+  LinkIcon,
+  PencilSquareIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { useState, useRef, useEffect } from "react";
 
 interface Post {
   id: string;
+  authorId: string; // The ID of the user who created the post
   user: string;
   username: string;
   avatar: string;
@@ -48,21 +50,27 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  userId: string; // The ID of the currently logged-in user
   formatNumber: (num: number) => string;
   handleLike: (postId: string) => void;
   handleBookmark: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   commentInput?: string;
   setCommentInput?: (val: string) => void;
+  isFollowing?: boolean;
+  onFollow?: (userId: string) => void;
 }
 
 const Post = ({
   post,
+  userId,
   formatNumber,
   handleLike,
   onAddComment,
   commentInput = "",
   setCommentInput,
+  isFollowing = false,
+  onFollow,
 }: PostProps) => {
   // Remove mock comments state
   // const [comments, setComments] = useState([...]);
@@ -96,34 +104,39 @@ const Post = ({
 
   const menuOptions = [
     {
-      icon: Flag,
+      icon: FlagIcon,
       label: "Report post",
       action: () => console.log("Report post"),
     },
-    {
-      icon: UserMinus,
+    // Only show unfollow option if user is following the post author and onFollow is available
+    ...(isFollowing && onFollow && userId !== post.authorId ? [{
+      icon: UserMinusIcon,
       label: "Unfollow user",
-      action: () => console.log("Unfollow user"),
-    },
+      action: () => onFollow(post.authorId),
+    }] : []),
     {
-      icon: VolumeX,
+      icon: SpeakerXMarkIcon,
       label: "Mute user",
       action: () => console.log("Mute user"),
     },
-    { icon: Copy, label: "Copy link", action: () => console.log("Copy link") },
     {
-      icon: Link,
+      icon: DocumentDuplicateIcon,
+      label: "Copy link",
+      action: () => console.log("Copy link"),
+    },
+    {
+      icon: LinkIcon,
       label: "Share via...",
       action: () => console.log("Share via"),
     },
     {
-      icon: Edit3,
+      icon: PencilSquareIcon,
       label: "Edit post",
       action: () => console.log("Edit post"),
       divider: true,
     },
     {
-      icon: Trash2,
+      icon: TrashIcon,
       label: "Delete post",
       action: () => console.log("Delete post"),
       danger: true,
@@ -141,30 +154,44 @@ const Post = ({
 
   return (
     <>
-      {/* Main Post Card */}
-      <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.1)] border border-gray-200 overflow-hidden">
+      {/* Modern Post Card with Glassmorphism */}
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
         {/* Post Header */}
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <img
-                src={post.avatar}
-                alt={post.user}
-                className="w-10 h-10 rounded-full object-cover"
-              />
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <img
+                  src={post.avatar}
+                  alt={post.user}
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-lg"
+                />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
               <div>
-                <div className="flex items-center">
-                  <span className="font-semibold text-gray-900">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-900 text-lg">
                     {post.user}
                   </span>
+                  {post.isVerified && (
+                    <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  {onFollow && userId && userId !== post.authorId && !isFollowing && (
+                    <button
+                      onClick={() => onFollow(post.authorId)}
+                      className="ml-3 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+                    >
+                      <UserPlusIcon className="w-4 h-4" />
+                      Follow
+                    </button>
+                  )}
                 </div>
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <span>{post.time}</span>
-                  <span>•</span>
-                  <div className="flex items-center space-x-1">
-                    <Eye className="w-3 h-3" />
-                    <span>{formatNumber(post.views)}</span>
-                  </div>
+                <div className="flex items-center space-x-3 text-sm text-gray-500">
+                  <span className="font-medium">{post.time}</span>
                 </div>
               </div>
             </div>
@@ -173,7 +200,7 @@ const Post = ({
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-all duration-200"
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <EllipsisHorizontalIcon className="w-5 h-5 text-gray-500" />
               </button>
 
               {/* Dropdown Menu */}
@@ -205,8 +232,8 @@ const Post = ({
               )}
             </div>
           </div>
-          <div className="mb-3">
-            <p className="text-gray-800 text-base leading-relaxed">
+          <div className="mb-4">
+            <p className="text-gray-800 text-lg leading-relaxed font-medium">
               {post.content}
             </p>
           </div>
@@ -214,59 +241,75 @@ const Post = ({
 
         {/* Post Image */}
         {post.image && (
-          <div className="border-t border-b border-gray-200">
+          <div className="mx-6 mb-4 rounded-2xl overflow-hidden shadow-lg">
             <img
               src={post.image}
               alt="Post content"
-              className="w-full h-auto max-h-[500px] object-cover"
+              className="w-full h-auto max-h-[500px] object-cover hover:scale-105 transition-transform duration-300"
             />
           </div>
         )}
 
         {/* Post Stats */}
-        <div className="px-4 py-2 border-b border-gray-200">
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">
-                  👍
+        <div className="px-6 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <div className="flex -space-x-1">
+                  <div className="w-6 h-6 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg">
+                    ❤️
+                  </div>
+                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg">
+                    👍
+                  </div>
                 </div>
-                <span>{formatNumber(post.likes)}</span>
+                <span className="font-semibold">{formatNumber(post.likes)}</span>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <span>{formatNumber(post.comments)} comments</span>
-              <span>{formatNumber(post.shares)} shares</span>
+            <div className="flex items-center space-x-4">
+              <span className="font-medium">{formatNumber(post.comments)} comments</span>
+              <span className="font-medium">{formatNumber(post.shares)} shares</span>
             </div>
           </div>
         </div>
 
-        {/* Post Actions */}
-        <div className="px-2 py-1">
-          <div className="flex items-center justify-between text-gray-500">
+        {/* Modern Post Actions */}
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => handleLike(post.id)}
-              className={`flex-1 flex items-center justify-center space-x-2 px-2 py-2 rounded-md transition-all duration-200 ${
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl transition-all duration-200 transform hover:scale-105 ${
                 post.isLiked
-                  ? "text-blue-600"
-                  : "hover:bg-gray-100 hover:text-gray-700"
+                  ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
               }`}
+              aria-label="Like"
             >
-              <Heart
-                className={`w-5 h-5 ${post.isLiked ? "fill-current" : ""}`}
+              <HeartIcon
+                className={`w-5 h-5 ${
+                  post.isLiked
+                    ? "fill-current"
+                    : "fill-none stroke-2 stroke-current"
+                }`}
               />
-              <span className="text-sm font-medium">Like</span>
+              <span className="font-medium text-sm">{formatNumber(post.likes)}</span>
             </button>
+            
             <button
               onClick={() => setShowComments(true)}
-              className="flex-1 flex items-center justify-center space-x-2 px-2 py-2 rounded-md hover:bg-gray-100 hover:text-gray-700 transition-all duration-200"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-600 transition-all duration-200 transform hover:scale-105"
+              aria-label="Comment"
             >
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Comment</span>
+              <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
+              <span className="font-medium text-sm">{formatNumber(post.comments)}</span>
             </button>
-            <button className="flex-1 flex items-center justify-center space-x-2 px-2 py-2 rounded-md hover:bg-gray-100 hover:text-gray-700 transition-all duration-200">
-              <Share2 className="w-5 h-5" />
-              <span className="text-sm font-medium">Share</span>
+            
+            <button
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-600 transition-all duration-200 transform hover:scale-105"
+              aria-label="Share"
+            >
+              <ArrowUpTrayIcon className="w-5 h-5" />
+              <span className="font-medium text-sm">{formatNumber(post.shares)}</span>
             </button>
           </div>
         </div>
@@ -326,7 +369,7 @@ const Post = ({
                   className="p-1 hover:bg-gray-200 rounded-full transition-colors"
                   type="button"
                 >
-                  <Smile className="w-4 h-4 text-gray-500" />
+                  <FaceSmileIcon className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
             </div>
@@ -355,7 +398,7 @@ const Post = ({
                 onClick={() => setShowComments(false)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
               </button>
               <h3 className="font-semibold text-gray-900">Comments</h3>
             </div>
@@ -381,7 +424,7 @@ const Post = ({
                         <span>{post.time}</span>
                         <span>•</span>
                         <div className="flex items-center space-x-1">
-                          <Eye className="w-3 h-3" />
+                          <EyeIcon className="w-3 h-3" />
                           <span>{formatNumber(post.views)}</span>
                         </div>
                       </div>
@@ -450,6 +493,15 @@ const Post = ({
                           <span className="font-semibold text-gray-900 text-sm">
                             {comment.user.fullName}
                           </span>
+                          {/* Example: show Follow if not following this commenter (logic to be implemented) */}
+                          {onFollow && (
+                            <button
+                              className="ml-1 px-2 py-0.5 bg-blue-500 text-white rounded-full text-xs flex items-center gap-1 hover:bg-blue-600 transition-all"
+                              onClick={() => onFollow(comment.user.id)}
+                            >
+                              <UserPlusIcon className="w-4 h-4" /> Follow
+                            </button>
+                          )}
                         </div>
                         <p className="text-gray-800 text-sm">{comment.text}</p>
                       </div>
@@ -494,7 +546,7 @@ const Post = ({
                   type="button"
                   className="p-1 hover:bg-gray-200 rounded-full transition-colors"
                 >
-                  <Smile className="w-4 h-4 text-gray-500" />
+                  <FaceSmileIcon className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
               {commentInput &&

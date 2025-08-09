@@ -1,7 +1,10 @@
 import Post from "./Post";
+import { useAuth } from "../contexts/AuthContextHelpers";
+
 
 interface FeedPost {
   id: string;
+  authorId: string;
   user: string;
   username: string;
   avatar: string;
@@ -40,6 +43,7 @@ interface PostsFeedProps {
   setCommentInputs?: React.Dispatch<
     React.SetStateAction<{ [postId: string]: string }>
   >;
+  onFollow?: (userId: string) => void;
 }
 
 const PostsFeed = ({
@@ -50,26 +54,34 @@ const PostsFeed = ({
   onAddComment,
   commentInputs,
   setCommentInputs,
-}: PostsFeedProps) => (
-  <div className="space-y-4 w-full max-w-2xl mx-auto">
-    {posts.map((post) => (
-      <Post
-        key={post.id}
-        post={post}
-        formatNumber={formatNumber}
-        handleLike={handleLike}
-        handleBookmark={handleBookmark}
-        onAddComment={onAddComment}
-        commentInput={commentInputs ? commentInputs[post.id] || "" : ""}
-        setCommentInput={
-          setCommentInputs
-            ? (val: string) =>
-                setCommentInputs((inputs) => ({ ...inputs, [post.id]: val }))
-            : undefined
-        }
-      />
-    ))}
-  </div>
-);
+  onFollow,
+}: PostsFeedProps) => {
+  const { user } = useAuth();
+
+  return (
+    <div className="space-y-4 w-full max-w-2xl mx-auto">
+      {posts.map((post) => (
+        <Post
+          key={post.id}
+          post={post}
+          userId={user?._id || ''} // Pass current user's ID
+          formatNumber={formatNumber}
+          handleLike={handleLike}
+          handleBookmark={handleBookmark}
+          onAddComment={onAddComment}
+          commentInput={commentInputs ? commentInputs[post.id] || "" : ""}
+          setCommentInput={
+            setCommentInputs
+              ? (val: string) =>
+                  setCommentInputs((inputs) => ({ ...inputs, [post.id]: val }))
+              : undefined
+          }
+          isFollowing={user?.following?.map(id => id.toString()).includes(post.authorId?.toString() || '')}
+          onFollow={onFollow}
+        />
+      ))}
+    </div>
+  );
+};
 
 export default PostsFeed;

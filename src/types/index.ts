@@ -91,6 +91,7 @@ export interface Post {
 
 export interface FeedPost {
   id: string;
+  authorId: string;
   user: string;
   username: string;
   avatar: string;

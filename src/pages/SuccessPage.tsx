@@ -131,7 +131,7 @@ const SuccessPage = () => {
             ) : (
               <>
                 <li>• Check your latest notifications</li>
-                <li>• Explore trending content</li>
+                <li>• Discover new features</li>
                 <li>• Connect with friends</li>
               </>
             )}
