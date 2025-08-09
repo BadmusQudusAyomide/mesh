@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContextHelpers";
+import { apiService } from "../lib/api";
+import socketIOClient, { Socket } from "socket.io-client";
 import {
   ArrowLeft,
   Send,
@@ -7,406 +11,324 @@ import {
   MoreVertical,
   Smile,
   Paperclip,
-  Check,
   CheckCheck,
   Circle,
+  Image,
+  Mic,
+  Plus,
 } from "lucide-react";
 
-// 1. Define a type for users and add index signature
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
-type User = {
-  name: string;
+interface Message {
+  _id: string;
+  sender: {
+    _id: string;
+    username: string;
+    fullName: string;
+    avatar: string;
+  };
+  recipient: {
+    _id: string;
+    username: string;
+    fullName: string;
+    avatar: string;
+  };
+  content: string;
+  messageType: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+interface ChatUser {
+  _id: string;
+  username: string;
+  fullName: string;
   avatar: string;
-  online: boolean;
-  lastSeen: string;
-};
-
-const users: Record<string, User> = {
-  aishabello: {
-    name: "Aisha Bello",
-    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-    online: true,
-    lastSeen: "Active now",
-  },
-  chineduokafor: {
-    name: "Chinedu Okafor",
-    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-    online: false,
-    lastSeen: "Last seen 2 hours ago",
-  },
-  ayomidebalogun: {
-    name: "Ayomide Balogun",
-    avatar: "https://randomuser.me/api/portraits/women/28.jpg",
-    online: true,
-    lastSeen: "Active now",
-  },
-  kemiadeyemi: {
-    name: "Kemi Adeyemi",
-    avatar: "https://randomuser.me/api/portraits/women/15.jpg",
-    online: false,
-    lastSeen: "Last seen 5 minutes ago",
-  },
-  tundeogundimu: {
-    name: "Tunde Ogundimu",
-    avatar: "https://randomuser.me/api/portraits/men/25.jpg",
-    online: true,
-    lastSeen: "Active now",
-  },
-};
-
-const initialMessages = [
-  {
-    id: 1,
-    fromMe: false,
-    text: "Hey! How are you doing today?",
-    time: "2:30 PM",
-    timestamp: new Date(Date.now() - 120000),
-    status: "read",
-  },
-  {
-    id: 2,
-    fromMe: true,
-    text: "I'm good, thanks! How about you?",
-    time: "2:31 PM",
-    timestamp: new Date(Date.now() - 60000),
-    status: "read",
-  },
-  {
-    id: 3,
-    fromMe: false,
-    text: "Doing well! Just finished a project I've been working on 🎉",
-    time: "2:32 PM",
-    timestamp: new Date(Date.now() - 30000),
-    status: "read",
-  },
-  {
-    id: 4,
-    fromMe: true,
-    text: "That's awesome! Congratulations 🎊",
-    time: "2:33 PM",
-    timestamp: new Date(Date.now() - 15000),
-    status: "delivered",
-  },
-];
+  isOnline: boolean;
+  lastActive: string;
+}
 
 function Chat() {
-  const [messages, setMessages] = useState(initialMessages);
-  const [input, setInput] = useState("");
+  const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatUser, setChatUser] = useState<ChatUser | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [currentUser, setCurrentUser] = useState("aishabello");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get user from current selection (in a real app, this would come from URL params)
-  const user = users[currentUser] || users["aishabello"];
+  useEffect(() => {
+    if (!username || !currentUser) return;
 
-  // Add user selector for demo purposes
-  const handleUserChange = (username: string) => {
-    setCurrentUser(username);
-    // Reset messages when switching users
-    setMessages(initialMessages);
+    // Initialize socket connection
+    const newSocket = socketIOClient(SOCKET_URL);
+    setSocket(newSocket);
+
+    // Join user's room
+    newSocket.emit('join', currentUser._id);
+
+    // Listen for new messages
+    newSocket.on('newMessage', (newMessage: Message) => {
+      setMessages(prev => [...prev, newMessage]);
+    });
+
+    // Listen for message sent confirmation
+    newSocket.on('messageSent', (sentMessage: Message) => {
+      setMessages(prev => [...prev, sentMessage]);
+    });
+
+    // Fetch chat user and messages
+    fetchChatData();
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [username, currentUser]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const fetchChatData = async () => {
+    if (!username) return;
+    
+    try {
+      setIsLoading(true);
+      // Get user profile
+      const userProfile = await apiService.getUserProfile(username);
+      setChatUser(userProfile.user);
+      
+      // Get messages
+      const messagesResponse = await apiService.getMessages(userProfile.user._id);
+      setMessages(messagesResponse.messages);
+    } catch (error) {
+      console.error('Failed to fetch chat data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const handleSendMessage = async () => {
+    if (!message.trim() || !chatUser || !currentUser) return;
 
-  // Simulate typing indicator
-  useEffect(() => {
-    if (isTyping) {
-      const timer = setTimeout(() => {
-        setIsTyping(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isTyping]);
-
-  const handleSend = (e: React.FormEvent | React.MouseEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const newMessage = {
-      id: messages.length + 1,
-      fromMe: true,
-      text: input,
-      time: new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      timestamp: new Date(),
-      status: "sending",
-    };
-
-    setMessages([...messages, newMessage]);
-    setInput("");
-
-    // Simulate message status updates
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === newMessage.id ? { ...msg, status: "sent" } : msg
-        )
-      );
-    }, 1000);
-
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === newMessage.id ? { ...msg, status: "delivered" } : msg
-        )
-      );
-    }, 2000);
-
-    // Simulate typing response
-    setTimeout(() => {
-      setIsTyping(true);
-    }, 3000);
-
-    setTimeout(() => {
-      setIsTyping(false);
-      const responses = [
-        "Nice! 😊",
-        "That sounds great!",
-        "I'm happy for you!",
-        "Tell me more about it",
-        "That's interesting",
-      ];
-      const randomResponse =
-        responses[Math.floor(Math.random() * responses.length)];
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          fromMe: false,
-          text: randomResponse,
-          time: new Date().toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          }),
-          timestamp: new Date(),
-          status: "read",
-        },
-      ]);
-    }, 6000);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "sending":
-        return <Circle className="w-3 h-3 text-gray-400" />;
-      case "sent":
-        return <Check className="w-3 h-3 text-gray-400" />;
-      case "delivered":
-        return <CheckCheck className="w-3 h-3 text-gray-400" />;
-      case "read":
-        return <CheckCheck className="w-3 h-3 text-blue-500" />;
-      default:
-        return null;
+    try {
+      const messageContent = message.trim();
+      setMessage("");
+      
+      await apiService.sendMessage(chatUser._id, messageContent);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setMessage(message); // Restore message on error
     }
   };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatLastSeen = (lastActive: string, isOnline: boolean) => {
+    if (isOnline) return "Active now";
+    
+    const date = new Date(lastActive);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) return `Last seen ${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `Last seen ${Math.floor(diffInMinutes / 60)}h ago`;
+    return `Last seen ${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600">Loading chat...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chatUser) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">User not found</h2>
+          <button 
+            onClick={() => navigate('/inbox')}
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Back to Messages
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* User Selector for Demo */}
-      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-        <div className="flex items-center space-x-2">
-          <span className="text-xs text-gray-600">
-            Demo: Select user to chat with:
-          </span>
-          <select
-            value={currentUser}
-            onChange={(e) => handleUserChange(e.target.value)}
-            className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={() => navigate('/inbox')}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors group"
           >
-            {Object.entries(users).map(([username, userData]) => (
-              <option key={username} value={username}>
-                {userData.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Chat Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => window.history.back()}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+            <ArrowLeft className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-
           <div className="relative">
             <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-10 h-10 rounded-full object-cover"
+              src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
+              alt={chatUser.fullName}
+              className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-md"
             />
-            {user.online && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+            {chatUser.isOnline && (
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
+                <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
+              </div>
             )}
           </div>
-
           <div>
-            <h2 className="font-semibold text-gray-900">{user.name}</h2>
-            <p className="text-xs text-gray-500">{user.lastSeen}</p>
+            <h2 className="font-semibold text-gray-900 text-lg">{chatUser.fullName}</h2>
+            <p className="text-sm text-gray-500">{formatLastSeen(chatUser.lastActive, chatUser.isOnline)}</p>
           </div>
         </div>
-
         <div className="flex items-center space-x-2">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Phone className="w-5 h-5 text-gray-600" />
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Phone className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Video className="w-5 h-5 text-gray-600" />
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Video className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <MoreVertical className="w-5 h-5 text-gray-600" />
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <MoreVertical className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.fromMe ? "justify-end" : "justify-start"}`}
-          >
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
+              <Smile className="w-10 h-10 text-blue-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Start the conversation</h3>
+            <p className="text-gray-500 max-w-sm">Send a message to {chatUser.fullName} to begin your chat.</p>
+          </div>
+        ) : (
+          messages.map((msg) => (
             <div
-              className={`flex items-end space-x-2 max-w-xs ${
-                msg.fromMe ? "flex-row-reverse space-x-reverse" : ""
-              }`}
+              key={msg._id}
+              className={`flex ${msg.sender._id === currentUser?._id ? "justify-end" : "justify-start"}`}
             >
-              {!msg.fromMe && (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-6 h-6 rounded-full object-cover"
-                />
-              )}
-              <div className="flex flex-col">
+              <div className="flex items-end space-x-2 max-w-xs lg:max-w-md">
+                {msg.sender._id !== currentUser?._id && (
+                  <img
+                    src={msg.sender.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender.username}`}
+                    alt={msg.sender.fullName}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
                 <div
-                  className={`px-4 py-2 rounded-2xl ${
-                    msg.fromMe
-                      ? "bg-blue-500 text-white rounded-br-md"
-                      : "bg-gray-100 text-gray-900 rounded-bl-md"
+                  className={`px-4 py-3 rounded-2xl shadow-sm ${
+                    msg.sender._id === currentUser?._id
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md"
+                      : "bg-white text-gray-900 border border-gray-200 rounded-bl-md"
                   }`}
                 >
-                  <p className="text-sm">{msg.text}</p>
-                </div>
-                <div
-                  className={`flex items-center space-x-1 mt-1 ${
-                    msg.fromMe ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <span className="text-xs text-gray-500">{msg.time}</span>
-                  {msg.fromMe && getStatusIcon(msg.status)}
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <div
+                    className={`flex items-center justify-end mt-2 space-x-1 ${
+                      msg.sender._id === currentUser?._id ? "text-blue-100" : "text-gray-500"
+                    }`}
+                  >
+                    <span className="text-xs">{formatTime(msg.createdAt)}</span>
+                    {msg.sender._id === currentUser?._id && (
+                      <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
 
         {/* Typing Indicator */}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="flex items-end space-x-2 max-w-xs">
+            <div className="flex items-end space-x-2">
               <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-6 h-6 rounded-full object-cover"
+                src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
+                alt={chatUser.fullName}
+                className="w-8 h-8 rounded-full object-cover"
               />
-              <div className="bg-gray-100 px-4 py-2 rounded-2xl rounded-bl-md">
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 </div>
               </div>
             </div>
           </div>
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3">
+      {/* Input */}
+      <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200 px-6 py-4">
         <div className="flex items-center space-x-3">
-          <button
-            type="button"
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          >
-            <Smile className="w-5 h-5 text-gray-600" />
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Plus className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-
-          <button
-            type="button"
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <Paperclip className="w-5 h-5 text-gray-600" />
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Image className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-
           <div className="flex-1 relative">
             <input
-              ref={inputRef}
               type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message..."
-              className="w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white border border-transparent focus:border-blue-500 transition-all"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`Message ${chatUser.fullName}...`}
+              className="w-full px-6 py-3 bg-gray-100 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder-gray-500"
             />
           </div>
-
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Smile className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+          </button>
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
+            <Mic className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+          </button>
           <button
-            type="button"
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className={`p-2 rounded-full transition-all ${
-              input.trim()
-                ? "bg-blue-500 text-white hover:bg-blue-600"
+            onClick={handleSendMessage}
+            disabled={!message.trim()}
+            className={`p-3 rounded-xl transition-all ${
+              message.trim()
+                ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Quick Emoji Picker */}
-        {showEmojiPicker && (
-          <div className="absolute bottom-16 left-4 bg-white border border-gray-200 rounded-lg shadow-lg p-3 flex space-x-2">
-            {["😊", "😂", "❤️", "👍", "🎉", "😍", "🤔", "👏"].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  setInput((prev) => prev + emoji);
-                  setShowEmojiPicker(false);
-                  if (inputRef.current) inputRef.current.focus();
-                }}
-                className="text-xl hover:bg-gray-100 p-1 rounded"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

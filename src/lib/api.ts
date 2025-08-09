@@ -181,6 +181,30 @@ class ApiService {
   async getNotifications(): Promise<{ notifications: Notification[] }> {
     return this.request<{ notifications: Notification[] }>("/posts/notifications", { method: "GET" });
   }
+
+  // Message endpoints
+  async getConversations(): Promise<{ conversations: any[] }> {
+    return this.request<{ conversations: any[] }>("/messages/conversations", { method: "GET" });
+  }
+
+  async getMessages(userId: string): Promise<{ messages: any[] }> {
+    return this.request<{ messages: any[] }>(`/messages/${userId}`, { method: "GET" });
+  }
+
+  async sendMessage(recipientId: string, content: string, messageType: string = 'text'): Promise<{ message: any }> {
+    return this.request<{ message: any }>("/messages", {
+      method: "POST",
+      body: JSON.stringify({ recipientId, content, messageType }),
+    });
+  }
+
+  async markAsRead(messageId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/messages/${messageId}/read`, { method: "PUT" });
+  }
+
+  async getMutualFollowers(): Promise<{ mutualFollowers: User[] }> {
+    return this.request<{ mutualFollowers: User[] }>(`/messages/mutual-followers`);
+  }
 }
 
 // Create and export a singleton instance
