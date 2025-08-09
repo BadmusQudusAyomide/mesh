@@ -56,26 +56,24 @@ function Chat() {
   const [chatUser, setChatUser] = useState<ChatUser | null>(null);
   const [isTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!username || !currentUser) return;
 
     // Initialize socket connection
-    const newSocket = socketIOClient(SOCKET_URL);
-    setSocket(newSocket);
+    const socket = socketIOClient(SOCKET_URL);
 
     // Join user's room
-    newSocket.emit('join', currentUser._id);
+    socket.emit('join', currentUser._id);
 
     // Listen for new messages
-    newSocket.on('newMessage', (newMessage: Message) => {
+    socket.on('newMessage', (newMessage: Message) => {
       setMessages(prev => [...prev, newMessage]);
     });
 
     // Listen for message sent confirmation
-    newSocket.on('messageSent', (sentMessage: Message) => {
+    socket.on('messageSent', (sentMessage: Message) => {
       setMessages(prev => [...prev, sentMessage]);
     });
 
@@ -83,7 +81,7 @@ function Chat() {
     fetchChatData();
 
     return () => {
-      newSocket.disconnect();
+      socket.disconnect();
     };
   }, [username, currentUser]);
 
