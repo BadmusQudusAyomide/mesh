@@ -293,6 +293,7 @@ function Home() {
       setPosts([
         {
           id: postRes.post._id,
+          authorId: user?._id || '',
           user: user?.fullName || "Anonymous",
           username: user?.username || "anonymous",
           avatar:
@@ -641,7 +642,6 @@ function Home() {
             {/* Posts Feed */}
             <div className="space-y-6">
               <PostsFeed
-          onFollow={handleFollow}
                 posts={posts}
                 formatNumber={formatNumber}
                 handleLike={handleLike}
