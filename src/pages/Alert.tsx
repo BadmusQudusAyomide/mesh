@@ -6,6 +6,7 @@ import {
   UserPlus,
   AtSign,
   Share2,
+  Bookmark,
   MoreHorizontal,
   Filter,
   ChevronDown,
@@ -23,10 +24,7 @@ import type { Notification } from "../types";
 const Alert: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [selectedNotifications, setSelectedNotifications] = useState<
-    string[]
-  >([]);
-  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  // Removed unused selection-related state to satisfy TS build
 
   // Infinite scroll state
   const [notifications, setNotifications] = useState<Notification[]>([]);
