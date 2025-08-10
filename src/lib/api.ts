@@ -295,6 +295,10 @@ class ApiService {
   async getMutualFollowers(): Promise<{ mutualFollowers: User[] }> {
     return this.request<{ mutualFollowers: User[] }>(`/messages/mutual-followers`);
   }
+
+  async getUserSuggestions(limit: number = 5): Promise<{ suggestions: User[] }> {
+    return this.request<{ suggestions: User[] }>(`/auth/suggestions?limit=${limit}`, { method: 'GET' });
+  }
 }
 
 // Create and export a singleton instance

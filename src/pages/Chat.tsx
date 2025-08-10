@@ -361,8 +361,12 @@ function Chat() {
             )}
           </Link>
           <div className="min-w-0">
-            <Link to={`/profile/${chatUser.username}`} className="font-semibold text-gray-900 text-lg truncate max-w-[60vw] sm:max-w-[40vw] hover:underline">
-              {chatUser.fullName}
+            <Link
+              to={`/profile/${chatUser.username}`}
+              className="font-semibold text-gray-900 text-lg truncate max-w-[60vw] sm:max-w-[40vw] hover:underline"
+              title={chatUser.fullName}
+            >
+              {(chatUser.fullName || chatUser.username).split(' ')[0]}
             </Link>
             <p className="text-sm text-gray-500 truncate max-w-[60vw] sm:max-w-[40vw]">{formatLastSeen(chatUser.lastActive, chatUser.isOnline)}</p>
           </div>
@@ -552,7 +556,7 @@ function Chat() {
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
                     onKeyPress={handleKeyPress}
-                    placeholder={`Message ${chatUser.fullName}...`}
+                    placeholder={`Message ${(chatUser.fullName || chatUser.username).split(' ')[0]}...`}
                     className="w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-32"
                     rows={1}
                     style={{

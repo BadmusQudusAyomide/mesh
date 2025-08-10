@@ -64,21 +64,21 @@ const Navigation = ({
             </span>
           </div>
           <div className="flex items-center space-x-6">
-            <button
-              onClick={() => setActiveTab("home")}
+            <Link
+              to="/home"
               className={`p-2 rounded-xl transition-all duration-200 ${
-                activeTab === "home"
+                location.pathname === "/home"
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-gray-600 hover:bg-white/20"
               }`}
             >
               <Home className="w-5 h-5" />
-            </button>
+            </Link>
 
-            <button
-              onClick={() => setActiveTab("notifications")}
+            <Link
+              to="/alert"
               className={`p-2 rounded-xl transition-all duration-200 relative ${
-                activeTab === "notifications"
+                location.pathname === "/alert"
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-gray-600 hover:bg-white/20"
               }`}
@@ -89,17 +89,17 @@ const Navigation = ({
                   {unreadCount}
                 </span>
               )}
-            </button>
-            <button
-              onClick={() => setActiveTab("messages")}
+            </Link>
+            <Link
+              to="/inbox"
               className={`p-2 rounded-xl transition-all duration-200 ${
-                activeTab === "messages"
+                location.pathname === "/inbox"
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-gray-600 hover:bg-white/20"
               }`}
             >
               <Mail className="w-5 h-5" />
-            </button>
+            </Link>
             <Link
               to={user ? `/profile/${user.username}` : "/profile"}
               className={`p-2 rounded-xl transition-all duration-200 ${
