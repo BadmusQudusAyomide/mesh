@@ -63,24 +63,44 @@ function Chat() {
   const [showAttachments, setShowAttachments] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
+
+  // Upsert helper to avoid duplicates
+  const upsertMessage = (incoming: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((m) => m._id === incoming._id);
+      if (exists) return prev.map((m) => (m._id === incoming._id ? incoming : m));
+      return [...prev, incoming];
+    });
+  };
 
   useEffect(() => {
     if (!username || !currentUser) return;
 
     // Initialize socket connection
     const socket = socketIOClient(SOCKET_URL);
+    socketRef.current = socket;
 
     // Join user's room
     socket.emit('join', currentUser._id);
 
     // Listen for new messages
     socket.on('newMessage', (newMessage: Message) => {
-      setMessages(prev => [...prev, newMessage]);
+      // Only process messages for this chat (between currentUser and chatUser)
+      const isForThisChat =
+        (newMessage.sender._id === chatUser?._id && newMessage.recipient._id === currentUser?._id) ||
+        (newMessage.sender._id === currentUser?._id && newMessage.recipient._id === chatUser?._id);
+      if (!isForThisChat) return;
+      upsertMessage(newMessage);
     });
 
     // Listen for message sent confirmation
     socket.on('messageSent', (sentMessage: Message) => {
-      setMessages(prev => [...prev, sentMessage]);
+      const isForThisChat =
+        (sentMessage.sender._id === chatUser?._id && sentMessage.recipient._id === currentUser?._id) ||
+        (sentMessage.sender._id === currentUser?._id && sentMessage.recipient._id === chatUser?._id);
+      if (!isForThisChat) return;
+      upsertMessage(sentMessage);
     });
 
     // Fetch chat user and messages
@@ -88,6 +108,7 @@ function Chat() {
 
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
   }, [username, currentUser]);
 
@@ -237,7 +258,7 @@ function Chat() {
     <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 min-w-0">
           <button 
             onClick={() => navigate('/inbox')}
             className="p-2 hover:bg-gray-100 rounded-xl transition-colors group"
@@ -256,9 +277,9 @@ function Chat() {
               </div>
             )}
           </div>
-          <div>
-            <h2 className="font-semibold text-gray-900 text-lg">{chatUser.fullName}</h2>
-            <p className="text-sm text-gray-500">{formatLastSeen(chatUser.lastActive, chatUser.isOnline)}</p>
+          <div className="min-w-0">
+            <h2 className="font-semibold text-gray-900 text-lg truncate max-w-[60vw] sm:max-w-[40vw]">{chatUser.fullName}</h2>
+            <p className="text-sm text-gray-500 truncate max-w-[60vw] sm:max-w-[40vw]">{formatLastSeen(chatUser.lastActive, chatUser.isOnline)}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
