@@ -295,14 +295,6 @@ class ApiService {
   async getMutualFollowers(): Promise<{ mutualFollowers: User[] }> {
     return this.request<{ mutualFollowers: User[] }>(`/messages/mutual-followers`);
   }
-
-  // Follow/unfollow a user
-  async followUser(userId: string): Promise<{ message: string; isFollowing: boolean; followersCount: number }> {
-    return this.request<{ message: string; isFollowing: boolean; followersCount: number }>(
-      `/users/${userId}/follow`,
-      { method: 'POST' }
-    );
-  }
 }
 
 // Create and export a singleton instance

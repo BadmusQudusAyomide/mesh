@@ -42,6 +42,7 @@ interface Post {
     user: {
       id: string;
       fullName: string;
+      username: string;
       avatar: string;
     };
     text: string;

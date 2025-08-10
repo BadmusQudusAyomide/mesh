@@ -25,8 +25,7 @@ import {
   Home,
   Building2,
   Phone,
-  UserPlus,
-  Check,
+  
 } from "lucide-react";
 import { io as socketIOClient, Socket } from "socket.io-client";
 import PostsFeed from "../components/PostsFeed";
@@ -213,42 +212,6 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const [birthday, setBirthday] = useState<string>(
     user.birthday ? new Date(user.birthday).toISOString().slice(0, 10) : ""
   );
-
-  const isOwnProfile = currentUser && profileUser && currentUser._id === profileUser._id;
-  const isFollowing = !!(currentUser && profileUser && currentUser.following?.includes(profileUser._id));
-  const [followLoading, setFollowLoading] = useState(false);
-
-  const handleToggleFollow = async () => {
-    if (!profileUser || !currentUser) return;
-    try {
-      setFollowLoading(true);
-      const res = await apiService.followUser(profileUser._id);
-      const nowFollowing = res.isFollowing;
-      // Update auth following list
-      if (updateUser) {
-        if (nowFollowing) {
-          const next = Array.from(new Set([...(currentUser.following || []), profileUser._id]));
-          updateUser({ following: next });
-        } else {
-          const next = (currentUser.following || []).filter((id) => id !== profileUser._id);
-          updateUser({ following: next });
-        }
-      }
-      // Update profile follower count/list locally
-      setProfileUser((prev) => {
-        if (!prev) return prev as any;
-        const nextFollowers = new Set(prev.followers || []);
-        if (nowFollowing) nextFollowers.add(currentUser._id);
-        else nextFollowers.delete(currentUser._id);
-        const followerCount = Array.from(nextFollowers).length;
-        return { ...prev, followers: Array.from(nextFollowers), followerCount } as any;
-      });
-    } catch (e) {
-      console.error("Toggle follow failed", e);
-    } finally {
-      setFollowLoading(false);
-    }
-  };
   const [gender, setGender] = useState<
     "male" | "female" | "other" | "prefer_not_to_say" | ""
   >(user.gender || "");
@@ -762,6 +725,7 @@ function Profile() {
                   user: {
                     id: c.user._id,
                     fullName: c.user.fullName,
+                    username: c.user.username,
                     avatar: c.user.avatar,
                   },
                   text: c.text,
@@ -833,6 +797,7 @@ function Profile() {
                   user: {
                     id: c.user._id,
                     fullName: c.user.fullName,
+                    username: c.user.username,
                     avatar: c.user.avatar,
                   },
                   text: c.text,
@@ -861,6 +826,7 @@ function Profile() {
                   user: {
                     id: c.user._id,
                     fullName: c.user.fullName,
+                    username: c.user.username,
                     avatar: c.user.avatar,
                   },
                   text: c.text,
