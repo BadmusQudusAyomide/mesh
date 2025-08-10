@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import Navigation from "../components/Navigation";
+import { useAuth } from "../contexts/AuthContextHelpers";
 import { useNotifications } from "../contexts/NotificationContextHelpers";
 import { apiService } from "../lib/api";
 import useInfiniteScroll from "../hooks/useInfiniteScroll";
@@ -35,6 +36,25 @@ const Alert: React.FC = () => {
 
   const { markAsRead, markAllAsRead } = useNotifications();
   const [loading, setLoading] = useState(false);
+  const { user: authUser, updateUser } = useAuth();
+
+  const isFollowingUser = (userId: string) => !!authUser?.following?.includes(userId);
+  const handleFollowBack = async (userId: string) => {
+    try {
+      const res = await apiService.followUser(userId);
+      // Update auth context following list
+      if (!authUser || !updateUser) return;
+      if (res.isFollowing) {
+        const next = Array.from(new Set([...(authUser.following || []), userId]));
+        updateUser({ following: next });
+      } else {
+        const next = (authUser.following || []).filter((id) => id !== userId);
+        updateUser({ following: next });
+      }
+    } catch (e) {
+      console.error("Follow back failed", e);
+    }
+  };
 
   useEffect(() => {
     setLoading(notifications.length === 0);
@@ -390,6 +410,18 @@ const Alert: React.FC = () => {
                                       <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
                                         View
                                       </button>
+                                      {alert.type === "follow" && alert.from?._id && (
+                                        <button
+                                          onClick={() => handleFollowBack(alert.from._id)}
+                                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                            isFollowingUser(alert.from._id)
+                                              ? "bg-gray-100 text-gray-700"
+                                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                                          }`}
+                                        >
+                                          {isFollowingUser(alert.from._id) ? "Following" : "Follow back"}
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                   

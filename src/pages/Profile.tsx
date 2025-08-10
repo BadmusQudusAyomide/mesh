@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { API_BASE_URL } from "../config";
 import { useAuth } from "../contexts/AuthContextHelpers";
@@ -20,6 +20,13 @@ import {
   Camera,
   Edit3,
   ArrowLeft,
+  Briefcase,
+  GraduationCap,
+  Home,
+  Building2,
+  Phone,
+  UserPlus,
+  Check,
 } from "lucide-react";
 import { io as socketIOClient, Socket } from "socket.io-client";
 import PostsFeed from "../components/PostsFeed";
@@ -143,15 +150,17 @@ const Post = ({
       <div className="space-y-2">
         {post.commentList.map((comment) => (
           <div key={comment.id} className="flex items-start gap-2">
-            <img
-              src={comment.user.avatar}
-              alt={comment.user.fullName}
-              className="w-8 h-8 rounded-full object-cover"
-            />
+            <Link to={`/profile/${comment.user.username}`} className="flex-shrink-0" aria-label={`View ${comment.user.fullName}'s profile`}>
+              <img
+                src={comment.user.avatar}
+                alt={comment.user.fullName}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            </Link>
             <div>
-              <span className="font-semibold text-sm">
+              <Link to={`/profile/${comment.user.username}`} className="font-semibold text-sm hover:underline">
                 {comment.user.fullName}
-              </span>
+              </Link>
               <p className="text-gray-700 text-sm mb-0.5">{comment.text}</p>
               <span className="text-xs text-gray-400">
                 {new Date(comment.createdAt).toLocaleString()}
@@ -174,6 +183,23 @@ interface EditProfileProps {
     location: string;
     avatar: string;
     cover: string;
+    birthday?: string | null;
+    gender?: "male" | "female" | "other" | "prefer_not_to_say" | "";
+    relationshipStatus?:
+      | "single"
+      | "in_a_relationship"
+      | "engaged"
+      | "married"
+      | "complicated"
+      | "separated"
+      | "divorced"
+      | "widowed"
+      | "";
+    workplace?: string;
+    education?: string;
+    hometown?: string;
+    currentCity?: string;
+    phone?: string;
   }) => Promise<void>;
 }
 
@@ -184,6 +210,64 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const [location, setLocation] = useState(user.location || "");
   const [avatar, setAvatar] = useState(user.avatar || "");
   const [cover, setCover] = useState(user.cover || "");
+  const [birthday, setBirthday] = useState<string>(
+    user.birthday ? new Date(user.birthday).toISOString().slice(0, 10) : ""
+  );
+
+  const isOwnProfile = currentUser && profileUser && currentUser._id === profileUser._id;
+  const isFollowing = !!(currentUser && profileUser && currentUser.following?.includes(profileUser._id));
+  const [followLoading, setFollowLoading] = useState(false);
+
+  const handleToggleFollow = async () => {
+    if (!profileUser || !currentUser) return;
+    try {
+      setFollowLoading(true);
+      const res = await apiService.followUser(profileUser._id);
+      const nowFollowing = res.isFollowing;
+      // Update auth following list
+      if (updateUser) {
+        if (nowFollowing) {
+          const next = Array.from(new Set([...(currentUser.following || []), profileUser._id]));
+          updateUser({ following: next });
+        } else {
+          const next = (currentUser.following || []).filter((id) => id !== profileUser._id);
+          updateUser({ following: next });
+        }
+      }
+      // Update profile follower count/list locally
+      setProfileUser((prev) => {
+        if (!prev) return prev as any;
+        const nextFollowers = new Set(prev.followers || []);
+        if (nowFollowing) nextFollowers.add(currentUser._id);
+        else nextFollowers.delete(currentUser._id);
+        const followerCount = Array.from(nextFollowers).length;
+        return { ...prev, followers: Array.from(nextFollowers), followerCount } as any;
+      });
+    } catch (e) {
+      console.error("Toggle follow failed", e);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+  const [gender, setGender] = useState<
+    "male" | "female" | "other" | "prefer_not_to_say" | ""
+  >(user.gender || "");
+  const [relationshipStatus, setRelationshipStatus] = useState<
+    | "single"
+    | "in_a_relationship"
+    | "engaged"
+    | "married"
+    | "complicated"
+    | "separated"
+    | "divorced"
+    | "widowed"
+    | ""
+  >(user.relationshipStatus || "");
+  const [workplace, setWorkplace] = useState(user.workplace || "");
+  const [education, setEducation] = useState(user.education || "");
+  const [hometown, setHometown] = useState(user.hometown || "");
+  const [currentCity, setCurrentCity] = useState(user.currentCity || "");
+  const [phone, setPhone] = useState(user.phone || "");
   const [loading, setLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -223,7 +307,22 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave({ fullName, bio, website, location, avatar, cover });
+      await onSave({
+        fullName,
+        bio,
+        website,
+        location,
+        avatar,
+        cover,
+        birthday: birthday || null,
+        gender,
+        relationshipStatus,
+        workplace,
+        education,
+        hometown,
+        currentCity,
+        phone,
+      } as any);
       onClose();
     } catch {
       alert("Failed to update profile");
@@ -337,6 +436,112 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Birthday
+              </label>
+              <input
+                type="date"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Gender
+              </label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={gender}
+                onChange={(e) => setGender(e.target.value as any)}
+              >
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Relationship Status
+              </label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={relationshipStatus}
+                onChange={(e) => setRelationshipStatus(e.target.value as any)}
+              >
+                <option value="">Prefer not to say</option>
+                <option value="single">Single</option>
+                <option value="in_a_relationship">In a relationship</option>
+                <option value="engaged">Engaged</option>
+                <option value="married">Married</option>
+                <option value="complicated">It's complicated</option>
+                <option value="separated">Separated</option>
+                <option value="divorced">Divorced</option>
+                <option value="widowed">Widowed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Phone
+              </label>
+              <input
+                type="tel"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Workplace
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={workplace}
+                onChange={(e) => setWorkplace(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Education
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={education}
+                onChange={(e) => setEducation(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Hometown
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={hometown}
+                onChange={(e) => setHometown(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Current City
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+                value={currentCity}
+                onChange={(e) => setCurrentCity(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
         <button
           type="submit"
@@ -431,6 +636,7 @@ function Profile() {
           user: {
             id: c.user._id,
             fullName: c.user.fullName,
+            username: c.user.username,
             avatar: c.user.avatar,
           },
           text: c.text,
@@ -478,6 +684,7 @@ function Profile() {
           user: {
             id: c.user._id,
             fullName: c.user.fullName,
+            username: c.user.username,
             avatar: c.user.avatar,
           },
           text: c.text,
@@ -685,6 +892,21 @@ function Profile() {
     { id: "likes", label: "Likes", count: 0 },
   ];
 
+  // Lightweight inline SVG placeholder (no network)
+  const AvatarPlaceholder = ({ className }: { className: string }) => (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="#e5e7eb"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect width="24" height="24" rx="999" fill="#e5e7eb" />
+      <circle cx="12" cy="9" r="4" fill="#cbd5e1" />
+      <path d="M4 20c1.8-3.5 5-5 8-5s6.2 1.5 8 5" fill="#cbd5e1" />
+    </svg>
+  );
+
   if (error || (!profileUser && !isLoading)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -718,14 +940,16 @@ function Profile() {
       <div className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-white/20">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img
-              src={
-                profileUser?.avatar ||
-                "https://randomuser.me/api/portraits/men/1.jpg"
-              }
-              alt="Profile"
-              className="w-10 h-10 rounded-xl object-cover"
-            />
+            {profileUser?.avatar ? (
+              <img
+                src={profileUser.avatar}
+                alt="Profile"
+                className="w-10 h-10 rounded-xl object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <AvatarPlaceholder className="w-10 h-10 rounded-xl" />
+            )}
             <div>
               <h1 className="font-bold text-lg text-gray-800">
                 {profileUser?.fullName || "..."}
@@ -764,14 +988,18 @@ function Profile() {
           <div className="relative px-6 pb-6">
             <div className="flex items-end justify-between -mt-16 mb-4">
               <div className="relative">
-                <img
-                  src={
-                    profileUser?.avatar ||
-                    "https://randomuser.me/api/portraits/men/1.jpg"
-                  }
-                  alt="Profile"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
-                />
+                {profileUser?.avatar ? (
+                  <img
+                    src={profileUser.avatar}
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <AvatarPlaceholder className="w-full h-full" />
+                  </div>
+                )}
                 <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center">
                   <Edit3 className="w-4 h-4" />
                 </button>
@@ -872,6 +1100,61 @@ function Profile() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* About Section */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200/60 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">About</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-700">
+            {profileUser?.birthday && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <span>{new Date(profileUser.birthday).toLocaleDateString()}</span>
+              </div>
+            )}
+            {profileUser?.gender && (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 text-gray-500">⚧</span>
+                <span className="capitalize">{profileUser.gender.replaceAll('_', ' ')}</span>
+              </div>
+            )}
+            {profileUser?.relationshipStatus && (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 text-gray-500">❤️</span>
+                <span className="capitalize">{profileUser.relationshipStatus.replaceAll('_', ' ')}</span>
+              </div>
+            )}
+            {profileUser?.workplace && (
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-gray-500" />
+                <span>Works at {profileUser.workplace}</span>
+              </div>
+            )}
+            {profileUser?.education && (
+              <div className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-gray-500" />
+                <span>Studied at {profileUser.education}</span>
+              </div>
+            )}
+            {profileUser?.hometown && (
+              <div className="flex items-center gap-2">
+                <Home className="w-4 h-4 text-gray-500" />
+                <span>From {profileUser.hometown}</span>
+              </div>
+            )}
+            {profileUser?.currentCity && (
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-gray-500" />
+                <span>Lives in {profileUser.currentCity}</span>
+              </div>
+            )}
+            {profileUser?.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-gray-500" />
+                <span>{profileUser.phone}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1017,8 +1300,13 @@ function Profile() {
           user={profileUser}
           onClose={() => setShowEdit(false)}
           onSave={async (data) => {
-            await apiService.updateProfile(data);
-            setProfileUser({ ...profileUser, ...data });
+            const res = await apiService.updateProfile(data);
+            const updated = res.user || { ...profileUser, ...data };
+            setProfileUser({ ...profileUser, ...updated });
+            // Also update auth context if this is the current user
+            if (currentUser && profileUser && currentUser._id === profileUser._id && updateUser) {
+              updateUser({ ...currentUser, ...updated });
+            }
           }}
         />
       )}

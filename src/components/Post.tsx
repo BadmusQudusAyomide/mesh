@@ -16,6 +16,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 interface Post {
   id: string;
@@ -122,12 +123,21 @@ const Post = ({
     {
       icon: DocumentDuplicateIcon,
       label: "Copy link",
-      action: () => console.log("Copy link"),
+      action: async () => {
+        try {
+          const url = getPostShareUrl();
+          await navigator.clipboard.writeText(url);
+          // Optionally, replace with your toast system
+          alert("Post link copied to clipboard");
+        } catch (e) {
+          console.error("Failed to copy link", e);
+        }
+      },
     },
     {
       icon: LinkIcon,
       label: "Share via...",
-      action: () => console.log("Share via"),
+      action: () => handleShare(),
     },
     {
       icon: PencilSquareIcon,
@@ -152,27 +162,59 @@ const Post = ({
     }
   };
 
+  // Build a shareable URL to this post. Uses current path with a post anchor
+  const getPostShareUrl = () => {
+    try {
+      const { origin, pathname } = window.location;
+      return `${origin}${pathname}#post-${post.id}`;
+    } catch {
+      return `#post-${post.id}`;
+    }
+  };
+
+  // Web Share API with clipboard fallback
+  const handleShare = async () => {
+    const shareData = {
+      title: `${post.user} on Mesh`,
+      text: post.content?.slice(0, 140) || "Check out this post on Mesh",
+      url: getPostShareUrl(),
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData as ShareData);
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareData.url);
+        alert("Post link copied to clipboard");
+      } else {
+        // Last resort
+        prompt("Copy this link:", shareData.url);
+      }
+    } catch (e) {
+      console.error("Share failed", e);
+    }
+  };
+
   return (
     <>
       {/* Modern Post Card with Glassmorphism */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+      <div id={`post-${post.id}`} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
         {/* Post Header */}
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
-              <div className="relative">
+              <Link to={`/profile/${post.username}`} className="relative group" aria-label={`View ${post.user}'s profile`}>
                 <img
                   src={post.avatar}
                   alt={post.user}
-                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-lg"
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-lg group-hover:brightness-95 transition"
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-              </div>
+              </Link>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900 text-lg">
+                  <Link to={`/profile/${post.username}`} className="font-bold text-gray-900 text-lg hover:underline">
                     {post.user}
-                  </span>
+                  </Link>
                   {post.isVerified && (
                     <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -305,6 +347,7 @@ const Post = ({
             </button>
             
             <button
+              onClick={handleShare}
               className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-600 transition-all duration-200 transform hover:scale-105"
               aria-label="Share"
             >
@@ -318,15 +361,17 @@ const Post = ({
         {post.commentList.length > 0 && !showComments && (
           <div className="px-4 py-3 border-t border-gray-200">
             <div className="flex items-start gap-3">
-              <img
-                src={post.commentList[0].user.avatar}
-                alt={post.commentList[0].user.fullName}
-                className="w-8 h-8 rounded-full object-cover"
-              />
+              <Link to={`/profile/${post.commentList[0].user.username}`} className="flex-shrink-0" aria-label={`View ${post.commentList[0].user.fullName}'s profile`}>
+                <img
+                  src={post.commentList[0].user.avatar}
+                  alt={post.commentList[0].user.fullName}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </Link>
               <div className="flex-1 bg-gray-100 rounded-2xl px-3 py-2">
-                <span className="font-semibold text-sm text-gray-900 mr-1">
+                <Link to={`/profile/${post.commentList[0].user.username}`} className="font-semibold text-sm text-gray-900 mr-1 hover:underline">
                   {post.commentList[0].user.fullName}
-                </span>
+                </Link>
                 <span className="text-sm text-gray-800">
                   {post.commentList[0].text}
                 </span>
@@ -482,17 +527,19 @@ const Post = ({
               <div className="px-4 py-2 space-y-4">
                 {post.commentList.map((comment, idx) => (
                   <div key={idx} className="flex items-start gap-3 py-2">
-                    <img
-                      src={comment.user.avatar}
-                      alt={comment.user.fullName}
-                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                    />
+                    <Link to={`/profile/${comment.user.username}`} className="flex-shrink-0" aria-label={`View ${comment.user.fullName}'s profile`}>
+                      <img
+                        src={comment.user.avatar}
+                        alt={comment.user.fullName}
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                      />
+                    </Link>
                     <div className="flex-1 min-w-0">
                       <div className="bg-gray-100 rounded-2xl px-3 py-2">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-gray-900 text-sm">
+                          <Link to={`/profile/${comment.user.username}`} className="font-semibold text-gray-900 text-sm hover:underline">
                             {comment.user.fullName}
-                          </span>
+                          </Link>
                           {/* Example: show Follow if not following this commenter (logic to be implemented) */}
                           {onFollow && (
                             <button
