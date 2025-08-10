@@ -361,11 +361,10 @@ function Inbox() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
+                            <div className="flex items-center space-x-2 mb-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-[60vw] sm:max-w-[30vw]">
                                 {conversation.user.fullName}
                               </h3>
-                              <span className="text-gray-500 text-sm">@{conversation.user.username}</span>
                               {conversation.user.isOnline && (
                                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
                                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
