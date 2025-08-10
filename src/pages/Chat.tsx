@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
 import socketIOClient from "socket.io-client";
@@ -348,20 +348,22 @@ function Chat() {
           >
             <ArrowLeft className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
-          <div className="relative">
+          <Link to={`/profile/${chatUser.username}`} className="relative group" aria-label={`View ${chatUser.fullName}'s profile`}>
             <img
               src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
               alt={chatUser.fullName}
-              className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-md"
+              className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-md group-hover:brightness-95 transition"
             />
             {chatUser.isOnline && (
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
                 <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
               </div>
             )}
-          </div>
+          </Link>
           <div className="min-w-0">
-            <h2 className="font-semibold text-gray-900 text-lg truncate max-w-[60vw] sm:max-w-[40vw]">{chatUser.fullName}</h2>
+            <Link to={`/profile/${chatUser.username}`} className="font-semibold text-gray-900 text-lg truncate max-w-[60vw] sm:max-w-[40vw] hover:underline">
+              {chatUser.fullName}
+            </Link>
             <p className="text-sm text-gray-500 truncate max-w-[60vw] sm:max-w-[40vw]">{formatLastSeen(chatUser.lastActive, chatUser.isOnline)}</p>
           </div>
         </div>
@@ -396,11 +398,13 @@ function Chat() {
             >
               <div className="flex items-end space-x-2 max-w-xs lg:max-w-md">
                 {msg.sender._id !== currentUser?._id && (
-                  <img
-                    src={msg.sender.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender.username}`}
-                    alt={msg.sender.fullName}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                  <Link to={`/profile/${msg.sender.username}`} className="flex-shrink-0" aria-label={`View ${msg.sender.fullName}'s profile`}>
+                    <img
+                      src={msg.sender.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender.username}`}
+                      alt={msg.sender.fullName}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  </Link>
                 )}
                 <div
                   className={`px-4 py-3 rounded-2xl shadow-sm ${
@@ -443,11 +447,13 @@ function Chat() {
         {isTyping && (
           <div className="flex justify-start">
             <div className="flex items-end space-x-2">
-              <img
-                src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
-                alt={chatUser.fullName}
-                className="w-8 h-8 rounded-full object-cover"
-              />
+              <Link to={`/profile/${chatUser.username}`} aria-label={`View ${chatUser.fullName}'s profile`}>
+                <img
+                  src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
+                  alt={chatUser.fullName}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </Link>
               <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>

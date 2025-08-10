@@ -23,6 +23,7 @@ type BackendComment = {
   user: {
     _id?: string;
     fullName: string;
+    username?: string;
     avatar: string;
   };
   text: string;
@@ -35,6 +36,7 @@ function mapBackendCommentToFeedComment(c: BackendComment, idx: number) {
     user: {
       id: c.user._id || String(idx),
       fullName: c.user.fullName,
+      username: c.user.username || "anonymous",
       avatar: c.user.avatar,
     },
     text: c.text,
@@ -50,50 +52,7 @@ const trendingTopics = [
   { tag: "#FutureOfWork", posts: "623K", growth: "+9%" },
 ];
 
-const stories = [
-  {
-    id: 1,
-    user: "You",
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    hasStory: false,
-    isAdd: true,
-  },
-  {
-    id: 2,
-    user: "Omor omor",
-    avatar: "https://randomuser.me/api/portraits/women/45.jpg",
-    hasStory: true,
-    isViewed: false,
-  },
-  {
-    id: 3,
-    user: "Owoyemi",
-    avatar: "https://randomuser.me/api/portraits/men/36.jpg",
-    hasStory: true,
-    isViewed: true,
-  },
-  {
-    id: 4,
-    user: "Codetream Eric",
-    avatar: "https://randomuser.me/api/portraits/men/37.jpg",
-    hasStory: true,
-    isViewed: false,
-  },
-  {
-    id: 5,
-    user: "Alfred Chinedu",
-    avatar: "https://randomuser.me/api/portraits/men/38.jpg",
-    hasStory: true,
-    isViewed: true,
-  },
-  {
-    id: 6,
-    user: "Ngozi Okonjo",
-    avatar: "https://randomuser.me/api/portraits/women/42.jpg",
-    hasStory: true,
-    isViewed: false,
-  },
-];
+// Stories feature not implemented yet: show placeholder in component
 
 const whoToFollow = [
   {
@@ -621,7 +580,6 @@ function Home() {
               darkMode ? "border-gray-700/50" : "border-gray-200/50"
             } shadow-lg`}>
               <Stories
-                stories={stories}
                 currentUser={
                   user
                     ? {

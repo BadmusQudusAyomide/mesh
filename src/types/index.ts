@@ -9,6 +9,23 @@ export interface User {
   bio: string;
   website: string;
   location: string;
+  birthday?: string | null;
+  gender?: "male" | "female" | "other" | "prefer_not_to_say" | "";
+  relationshipStatus?:
+    | "single"
+    | "in_a_relationship"
+    | "engaged"
+    | "married"
+    | "complicated"
+    | "separated"
+    | "divorced"
+    | "widowed"
+    | "";
+  workplace?: string;
+  education?: string;
+  hometown?: string;
+  currentCity?: string;
+  phone?: string;
   isVerified: boolean;
   isPrivate: boolean;
   followers: string[];
@@ -113,6 +130,7 @@ export interface FeedPost {
     user: {
       id: string;
       fullName: string;
+      username: string;
       avatar: string;
     };
     text: string;
@@ -122,10 +140,10 @@ export interface FeedPost {
 
 export interface Notification {
   _id: string;
-  type: string;
-  from: { fullName: string; avatar: string; username: string };
-  post: { content: string; image?: string };
+  type: string; // like | comment | follow | mention | share | bookmark | view
+  from: { _id: string; fullName: string; avatar: string; username: string };
+  post?: { content: string; image?: string };
   text: string;
   isRead: boolean;
   createdAt: string;
-} 
+}
