@@ -3,14 +3,19 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
+import useInfiniteScroll from "../hooks/useInfiniteScroll";
+import ConversationSkeleton from "../components/ConversationSkeleton";
 import {
   MessageCircle,
   Search,
   Plus,
-  MoreHorizontal,
   CheckCheck,
   Users,
   Sparkles,
+  X,
+  Settings,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 
 interface Conversation {
@@ -37,30 +42,79 @@ interface Conversation {
 function Inbox() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState("home");
+
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Infinite scroll state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [mutualFollowers, setMutualFollowers] = useState<any[]>([]);
   const [loadingMutualFollowers, setLoadingMutualFollowers] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState("all");
+
+  // Load more conversations function
+  const loadMoreConversations = async () => {
+    if (!hasMore) return;
+    
+    try {
+      const response = await apiService.getConversationsPaginated(currentPage, 5);
+      const newConversations = response.conversations;
+      
+      setConversations(prev => {
+        // Prevent duplicates by filtering out conversations that already exist
+        const existingIds = new Set(prev.map(c => c._id));
+        const uniqueNewConversations = newConversations.filter(c => !existingIds.has(c._id));
+        return [...prev, ...uniqueNewConversations];
+      });
+      
+      setCurrentPage(prev => prev + 1);
+      setHasMore(response.pagination.hasMore);
+    } catch (err) {
+      console.error('Failed to load more conversations:', err);
+      setError('Failed to load conversations');
+    }
+  };
+
+  // Infinite scroll hook
+  const { isFetching, setIsFetching } = useInfiniteScroll(loadMoreConversations);
 
   useEffect(() => {
     fetchConversations();
   }, []);
 
+  // Stop fetching when done loading
+  useEffect(() => {
+    if (isFetching && !hasMore) {
+      setIsFetching(false);
+    }
+  }, [isFetching, hasMore, setIsFetching]);
+
+  // Update filtered conversations when conversations change
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [conversations]);
+
+  // Initial load
   const fetchConversations = async () => {
     try {
-      setIsLoading(true);
-      const response = await apiService.getConversations();
+      setIsInitialLoading(true);
+      setError(null);
+      const response = await apiService.getConversationsPaginated(1, 5);
       setConversations(response.conversations);
-      setFilteredConversations(response.conversations);
+      setCurrentPage(2); // Next page to load
+      setHasMore(response.pagination.hasMore);
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
+      setError('Failed to load conversations');
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
     }
   };
 
@@ -118,162 +172,261 @@ function Inbox() {
 
   const unreadCount = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
 
+  const getFilteredConversations = () => {
+    let filtered = filteredConversations;
+    if (filterType === "unread") {
+      filtered = filtered.filter(conv => conv.unreadCount > 0);
+    } else if (filterType === "online") {
+      filtered = filtered.filter(conv => conv.user.isOnline);
+    }
+    return filtered;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className={`min-h-screen transition-all duration-300 ${
+      darkMode ? "bg-gray-900" : "bg-gray-50"
+    }`}>
       <Navigation
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab="messages"
+        setActiveTab={() => {}}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
       
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl">
-                <MessageCircle className="w-6 h-6 text-white" />
+      {/* Main Content */}
+      <div className="pt-20 md:pt-6 pb-20 md:pb-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {unreadCount > 0 ? `${unreadCount} unread messages` : 'All caught up!'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span className="text-sm font-medium hidden sm:inline">Filter</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                  <button 
+                    onClick={handleNewChat}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">New Chat</span>
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                    <Settings className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-                <p className="text-gray-500">Connect with people you follow</p>
+            </div>
+            
+            {/* Search and Filters */}
+            <div className="p-6 space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
               </div>
-              {unreadCount > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-red-100 rounded-full">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-red-700 text-sm font-medium">{unreadCount} unread</span>
+              
+              {/* Filter Options */}
+              {showFilters && (
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "all", label: "All", count: conversations.length },
+                    { id: "unread", label: "Unread", count: conversations.filter(c => c.unreadCount > 0).length },
+                    { id: "online", label: "Online", count: conversations.filter(c => c.user.isOnline).length },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => setFilterType(filter.id)}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+                        filterType === filter.id
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      <span>{filter.label}</span>
+                      {filter.count > 0 && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs ${
+                            filterType === filter.id ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                          }`}
+                        >
+                          {filter.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
-                <MoreHorizontal className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-              </button>
-              <button 
-                onClick={handleNewChat}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
-              >
-                <Plus className="w-4 h-4" />
-                New Chat
-              </button>
-            </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Messages List */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-600">Loading conversations...</span>
-            </div>
-          </div>
-        ) : filteredConversations.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Users className="w-12 h-12 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">
-              {searchQuery ? "No conversations found" : "No conversations yet"}
-            </h3>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              {searchQuery
-                ? "Try adjusting your search terms"
-                : "Start following people to begin conversations with them"}
-            </p>
-            <button 
-              onClick={() => navigate('/home')}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg"
-            >
-              Discover People
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation._id}
-                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-blue-300 transition-all duration-200 cursor-pointer group hover:shadow-lg"
-                onClick={() => handleChatClick(conversation.user.username)}
-              >
-                <div className="flex items-center gap-4">
-                  {/* Avatar with Online Status */}
-                  <div className="relative">
-                    <img
-                      src={conversation.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conversation.user.username}`}
-                      alt={conversation.user.fullName}
-                      className="w-14 h-14 rounded-full object-cover ring-2 ring-white shadow-md"
-                    />
-                    {conversation.user.isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-3 border-white rounded-full shadow-sm">
-                        <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Message Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {conversation.user.fullName}
-                        </h3>
-                        <span className="text-gray-500 text-sm">@{conversation.user.username}</span>
+          {/* Messages List */}
+          <div className="space-y-3">
+            {/* Initial Loading State */}
+            {isInitialLoading ? (
+              <ConversationSkeleton count={5} />
+            ) : error ? (
+              <div className="text-center py-12">
+                <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <X className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Failed to load conversations
+                </h3>
+                <p className="text-gray-500 mb-4">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : getFilteredConversations().length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {searchQuery ? "No conversations found" : filterType === "unread" ? "No unread messages" : filterType === "online" ? "No online contacts" : "No conversations yet"}
+                </h3>
+                <p className="text-gray-500 max-w-sm mx-auto mb-6">
+                  {searchQuery
+                    ? "Try adjusting your search terms"
+                    : filterType === "unread" ? "All your messages are read!"
+                    : filterType === "online" ? "No contacts are currently online"
+                    : "Start following people to begin conversations with them"}
+                </p>
+                {!searchQuery && filterType === "all" && (
+                  <button 
+                    onClick={() => navigate('/home')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Discover People
+                  </button>
+                )}
+              </div>
+            ) : (
+              getFilteredConversations().map((conversation) => (
+                <div
+                  key={conversation._id}
+                  className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer group ${
+                    conversation.unreadCount > 0 
+                      ? "border-blue-200 bg-blue-50/30" 
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  onClick={() => handleChatClick(conversation.user.username)}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center space-x-3">
+                      {/* Avatar with status */}
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={conversation.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conversation.user.username}`}
+                          alt={conversation.user.fullName}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
                         {conversation.user.isOnline && (
-                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                            <span className="text-green-700 text-xs font-medium">Online</span>
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
+                            <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
                           </div>
                         )}
+                        {conversation.unreadCount > 0 && (
+                          <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {conversation.lastMessage && (
-                          <span className="text-xs text-gray-500">
-                            {formatTime(conversation.lastMessage.createdAt)}
-                          </span>
-                        )}
-                        {conversation.lastMessage?.sender === currentUser?._id && (
-                          <CheckCheck className="w-4 h-4 text-blue-500" />
-                        )}
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
+                                {conversation.user.fullName}
+                              </h3>
+                              <span className="text-gray-500 text-sm">@{conversation.user.username}</span>
+                              {conversation.user.isOnline && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                  <span className="text-green-700 text-xs font-medium">Online</span>
+                                </div>
+                              )}
+                            </div>
+                            {conversation.lastMessage && (
+                              <div className="flex items-center justify-between">
+                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2">
+                                  {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
+                                  {conversation.lastMessage.content}
+                                </p>
+                                <div className="flex items-center space-x-2 flex-shrink-0">
+                                  <span className="text-xs text-gray-500">
+                                    {formatTime(conversation.lastMessage.createdAt)}
+                                  </span>
+                                  {conversation.lastMessage?.sender === currentUser?._id && (
+                                    <CheckCheck className={`w-4 h-4 ${
+                                      conversation.lastMessage.isRead ? 'text-blue-500' : 'text-gray-400'
+                                    }`} />
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Unread indicator */}
+                          {conversation.unreadCount > 0 && (
+                            <div className="ml-3 flex-shrink-0">
+                              <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                {conversation.unreadCount}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {conversation.lastMessage && (
-                      <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors">
-                        {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
-                        {conversation.lastMessage.content}
-                      </p>
-                    )}
                   </div>
-
-                  {/* Unread Indicator */}
-                  {conversation.unreadCount > 0 && (
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">
-                        {conversation.unreadCount}
-                      </div>
-                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                    </div>
-                  )}
+                </div>
+              ))
+            )}
+            
+            {/* Loading more conversations */}
+            {isFetching && hasMore && (
+              <div className="mt-6">
+                <ConversationSkeleton count={3} />
+              </div>
+            )}
+            
+            {/* End of conversations message */}
+            {!hasMore && conversations.length > 0 && (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-600">
+                  <CheckCheck className="w-4 h-4 mr-2" />
+                  You're all caught up!
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* New Chat Modal */}
@@ -281,10 +434,10 @@ function Inbox() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
                     <Users className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -294,9 +447,9 @@ function Inbox() {
                 </div>
                 <button
                   onClick={() => setShowNewChatModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <Plus className="w-5 h-5 text-gray-600 rotate-45" />
+                  <X className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
             </div>

@@ -14,6 +14,10 @@ import {
   Image,
   Mic,
   Plus,
+  Camera,
+  FileText,
+  MapPin,
+  X,
 } from "lucide-react";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -56,6 +60,8 @@ function Chat() {
   const [chatUser, setChatUser] = useState<ChatUser | null>(null);
   const [isTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -132,6 +138,27 @@ function Chat() {
       handleSendMessage();
     }
   };
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = document.querySelector('textarea');
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+    }
+  }, [message]);
+
+  // Close attachments when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showAttachments) {
+        setShowAttachments(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showAttachments]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -288,42 +315,116 @@ function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200 px-6 py-4">
-        <div className="flex items-center space-x-3">
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
-            <Plus className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-          </button>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
-            <Image className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-          </button>
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={`Message ${chatUser.fullName}...`}
-              className="w-full px-6 py-3 bg-gray-100 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder-gray-500"
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 relative">
+        {/* Attachment Popup */}
+        {showAttachments && (
+          <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={() => setShowAttachments(false)}
             />
+            <div className="absolute bottom-full left-4 mb-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-50">
+              <div className="grid grid-cols-3 gap-2 w-48">
+                <button className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-600 transition-colors">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Camera</span>
+                </button>
+                <button className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-green-600 transition-colors">
+                    <Image className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Gallery</span>
+                </button>
+                <button className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-purple-600 transition-colors">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Document</span>
+                </button>
+                <button className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                  <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-red-600 transition-colors">
+                    <MapPin className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Location</span>
+                </button>
+                <button className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-orange-600 transition-colors">
+                    <Smile className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Sticker</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+        
+        <div className="px-4 py-3">
+          <div className="flex items-end space-x-2">
+            {/* Attachment Button - Hidden when typing on mobile */}
+            {(!message.trim() || !isInputFocused) && (
+              <button 
+                onClick={() => setShowAttachments(!showAttachments)}
+                className={`p-2 rounded-full transition-all duration-200 flex-shrink-0 ${
+                  showAttachments 
+                    ? 'bg-blue-500 text-white transform rotate-45' 
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                {showAttachments ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              </button>
+            )}
+            
+            {/* Input Container */}
+            <div className="flex-1 relative">
+              <div className={`flex items-end bg-gray-100 rounded-2xl transition-all duration-200 ${
+                isInputFocused ? 'bg-white border border-gray-300 shadow-sm' : ''
+              }`}>
+                <div className="flex-1">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={`Message ${chatUser.fullName}...`}
+                    className="w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-32"
+                    rows={1}
+                    style={{
+                      minHeight: '44px',
+                      height: 'auto',
+                      overflowY: message.length > 100 ? 'auto' : 'hidden'
+                    }}
+                  />
+                </div>
+                
+                {/* Emoji Button - Only show when not typing or on desktop */}
+                {(!message.trim() || window.innerWidth >= 768) && (
+                  <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0">
+                    <Smile className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Voice/Send Button */}
+            <div className="flex-shrink-0">
+              {message.trim() ? (
+                <button
+                  onClick={handleSendMessage}
+                  className="p-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              ) : (
+                <button className="p-2.5 text-gray-500 hover:bg-gray-100 rounded-full transition-all duration-200">
+                  <Mic className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
-            <Smile className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-          </button>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-colors group">
-            <Mic className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-          </button>
-          <button
-            onClick={handleSendMessage}
-            disabled={!message.trim()}
-            className={`p-3 rounded-xl transition-all ${
-              message.trim()
-                ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            <Send className="w-5 h-5" />
-          </button>
         </div>
       </div>
     </div>

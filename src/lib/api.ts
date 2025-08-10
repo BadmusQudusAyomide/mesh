@@ -155,11 +155,55 @@ class ApiService {
     });
   }
 
+  // Get main feed posts with pagination for infinite scroll
+  async getPostsPaginated(page: number = 1, limit: number = 5): Promise<{
+    posts: Post[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalPosts: number;
+      hasMore: boolean;
+      limit: number;
+    };
+  }> {
+    return this.request<{
+      posts: Post[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalPosts: number;
+        hasMore: boolean;
+        limit: number;
+      };
+    }>(`/posts?page=${page}&limit=${limit}`, { method: "GET" });
+  }
+
   // Get posts by username
-  async getPostsByUsername(username: string): Promise<{ posts: Post[] }> {
-    return this.request<{ posts: Post[] }>(`/posts/user/${username}`, {
-      method: "GET",
-    });
+  async getPostsByUsername(username: string): Promise<{ posts: any[] }> {
+    return this.request<{ posts: any[] }>(`/posts/user/${username}`, { method: "GET" });
+  }
+
+  // Get user posts with pagination for infinite scroll
+  async getPostsByUsernamePaginated(username: string, page: number = 1, limit: number = 5): Promise<{ 
+    posts: any[]; 
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalPosts: number;
+      hasMore: boolean;
+      limit: number;
+    }
+  }> {
+    return this.request<{ 
+      posts: any[]; 
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalPosts: number;
+        hasMore: boolean;
+        limit: number;
+      }
+    }>(`/posts/user/${username}?page=${page}&limit=${limit}`, { method: "GET" });
   }
 
   // Like or unlike a post
@@ -182,9 +226,55 @@ class ApiService {
     return this.request<{ notifications: Notification[] }>("/posts/notifications", { method: "GET" });
   }
 
+  // Get notifications with pagination for infinite scroll
+  async getNotificationsPaginated(page: number = 1, limit: number = 5): Promise<{ 
+    notifications: Notification[]; 
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalNotifications: number;
+      hasMore: boolean;
+      limit: number;
+    }
+  }> {
+    return this.request<{ 
+      notifications: Notification[]; 
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalNotifications: number;
+        hasMore: boolean;
+        limit: number;
+      }
+    }>(`/posts/notifications?page=${page}&limit=${limit}`, { method: "GET" });
+  }
+
   // Message endpoints
   async getConversations(): Promise<{ conversations: any[] }> {
     return this.request<{ conversations: any[] }>("/messages/conversations", { method: "GET" });
+  }
+
+  // Get conversations with pagination for infinite scroll
+  async getConversationsPaginated(page: number = 1, limit: number = 5): Promise<{ 
+    conversations: any[]; 
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalConversations: number;
+      hasMore: boolean;
+      limit: number;
+    }
+  }> {
+    return this.request<{ 
+      conversations: any[]; 
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalConversations: number;
+        hasMore: boolean;
+        limit: number;
+      }
+    }>(`/messages/conversations?page=${page}&limit=${limit}`, { method: "GET" });
   }
 
   async getMessages(userId: string): Promise<{ messages: any[] }> {

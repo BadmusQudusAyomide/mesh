@@ -4,6 +4,8 @@ import Navigation from "../components/Navigation";
 import { API_BASE_URL } from "../config";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
+import useInfiniteScroll from "../hooks/useInfiniteScroll";
+import PostSkeleton from "../components/PostSkeleton";
 import type { User, Post, FeedPost } from "../types";
 import {
   Crown,
@@ -360,6 +362,12 @@ function Profile() {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Infinite scroll state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [postsError, setPostsError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{
     [postId: string]: string;
@@ -381,39 +389,145 @@ function Profile() {
         setProfileUser(response.user);
         setIsFollowing(response.isFollowing);
 
-        const postsRes = await apiService.getPostsByUsername(username);
-        setPosts(
-          postsRes.posts.map((post) => ({
-            id: post._id,
-            authorId: post.user._id,
-            user: post.user.fullName,
-            username: post.user.username,
-            avatar: post.user.avatar,
-            content: post.content,
-            time: new Date(post.createdAt).toLocaleString(),
-            image: post.image,
-            likes: post.likes.length,
-            comments: post.comments.length,
-            shares: 0,
-            views: 0,
-            isLiked: currentUser ? post.likes.includes(currentUser._id) : false,
-            isBookmarked: false,
-            isVerified: post.user.isVerified,
-            engagement: 0,
-            trending: undefined,
-            category: undefined,
-            commentList: (post.comments || []).map((c) => ({
-              id: c._id,
-              user: {
-                id: c.user._id,
-                fullName: c.user.fullName,
-                avatar: c.user.avatar,
-              },
-              text: c.text,
-              createdAt: c.createdAt,
-            })),
-          }))
-        );
+        // Load initial posts with pagination
+        await loadInitialPosts(username);
+      } catch {
+        setError("Failed to load profile");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [username, currentUser]);
+
+  // Load initial posts function
+  const loadInitialPosts = async (username: string) => {
+    try {
+      setIsInitialLoading(true);
+      setPostsError(null);
+      const postsRes = await apiService.getPostsByUsernamePaginated(username, 1, 5);
+      const transformedPosts = postsRes.posts.map((post) => ({
+        id: post._id,
+        authorId: post.user._id,
+        user: post.user.fullName,
+        username: post.user.username,
+        avatar: post.user.avatar,
+        content: post.content,
+        time: new Date(post.createdAt).toLocaleString(),
+        image: post.image,
+        likes: post.likes.length,
+        comments: post.comments.length,
+        shares: 0,
+        views: 0,
+        isLiked: currentUser ? post.likes.includes(currentUser._id) : false,
+        isBookmarked: false,
+        isVerified: post.user.isVerified,
+        engagement: 0,
+        trending: undefined,
+        category: undefined,
+        commentList: (post.comments || []).map((c) => ({
+          id: c._id,
+          user: {
+            id: c.user._id,
+            fullName: c.user.fullName,
+            avatar: c.user.avatar,
+          },
+          text: c.text,
+          createdAt: c.createdAt,
+        })),
+      }));
+      setPosts(transformedPosts);
+      setCurrentPage(2); // Next page to load
+      setHasMore(postsRes.pagination.hasMore);
+    } catch (err) {
+      console.error('Failed to load initial posts:', err);
+      setPostsError('Failed to load posts');
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
+
+  // Load more posts function
+  const loadMorePosts = async () => {
+    if (!hasMore || !username) return;
+    
+    try {
+      const postsRes = await apiService.getPostsByUsernamePaginated(username, currentPage, 5);
+      const transformedPosts = postsRes.posts.map((post) => ({
+        id: post._id,
+        authorId: post.user._id,
+        user: post.user.fullName,
+        username: post.user.username,
+        avatar: post.user.avatar,
+        content: post.content,
+        time: new Date(post.createdAt).toLocaleString(),
+        image: post.image,
+        likes: post.likes.length,
+        comments: post.comments.length,
+        shares: 0,
+        views: 0,
+        isLiked: currentUser ? post.likes.includes(currentUser._id) : false,
+        isBookmarked: false,
+        isVerified: post.user.isVerified,
+        engagement: 0,
+        trending: undefined,
+        category: undefined,
+        commentList: (post.comments || []).map((c) => ({
+          id: c._id,
+          user: {
+            id: c.user._id,
+            fullName: c.user.fullName,
+            avatar: c.user.avatar,
+          },
+          text: c.text,
+          createdAt: c.createdAt,
+        })),
+      }));
+      
+      setPosts(prev => {
+        // Prevent duplicates by filtering out posts that already exist
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewPosts = transformedPosts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueNewPosts];
+      });
+      
+      setCurrentPage(prev => prev + 1);
+      setHasMore(postsRes.pagination.hasMore);
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+      setPostsError('Failed to load more posts');
+    }
+  };
+
+  // Infinite scroll hook
+  const { isFetching, setIsFetching } = useInfiniteScroll(loadMorePosts);
+
+  // Stop fetching when done loading
+  useEffect(() => {
+    if (isFetching && !hasMore) {
+      setIsFetching(false);
+    }
+  }, [isFetching, hasMore, setIsFetching]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!username) {
+        setError("Username is required");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await apiService.getUserProfile(username);
+        setProfileUser(response.user);
+        setIsFollowing(response.isFollowing);
+
+        // Load initial posts with pagination
+        await loadInitialPosts(username);
       } catch {
         setError("Failed to load profile");
       } finally {
@@ -786,16 +900,72 @@ function Profile() {
 
         <div className="pb-8">
           {activeTab === "posts" && (
-            <PostsFeed
-              posts={posts}
-              formatNumber={formatNumber}
-              handleLike={handleLike}
-              handleBookmark={handleBookmark}
-              onAddComment={handleAddComment}
-              commentInputs={commentInputs}
-              setCommentInputs={setCommentInputs}
-              onFollow={handleFollow} // Pass the generic follow handler
-            />
+            <>
+              {/* Initial Loading State */}
+              {isInitialLoading ? (
+                <PostSkeleton count={5} />
+              ) : postsError ? (
+                <div className="text-center py-12">
+                  <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <ExternalLink className="h-6 w-6 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Failed to load posts
+                  </h3>
+                  <p className="text-gray-500 mb-4">{postsError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No posts yet
+                  </h3>
+                  <p className="text-gray-500 max-w-sm mx-auto">
+                    {currentUser && profileUser && currentUser._id === profileUser._id 
+                      ? "Share your first post to get started!" 
+                      : `${profileUser?.fullName} hasn't posted anything yet.`}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <PostsFeed
+                    posts={posts}
+                    formatNumber={formatNumber}
+                    handleLike={handleLike}
+                    handleBookmark={handleBookmark}
+                    onAddComment={handleAddComment}
+                    commentInputs={commentInputs}
+                    setCommentInputs={setCommentInputs}
+                    onFollow={handleFollow} // Pass the generic follow handler
+                  />
+                  
+                  {/* Loading more posts */}
+                  {isFetching && hasMore && (
+                    <div className="mt-6">
+                      <PostSkeleton count={3} />
+                    </div>
+                  )}
+                  
+                  {/* End of posts message */}
+                  {!hasMore && posts.length > 0 && (
+                    <div className="text-center py-8">
+                      <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-600">
+                        <Crown className="w-4 h-4 mr-2" />
+                        You've seen all posts!
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
           )}
 
           {activeTab === "media" && (
