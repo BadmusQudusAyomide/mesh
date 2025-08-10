@@ -18,6 +18,8 @@ import {
   FileText,
   MapPin,
   X,
+  RotateCw,
+  AlertCircle,
 } from "lucide-react";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -40,6 +42,8 @@ interface Message {
   messageType: string;
   isRead: boolean;
   createdAt: string;
+  // client-only status for optimistic updates
+  status?: 'sending' | 'failed' | 'sent';
 }
 
 interface ChatUser {
@@ -58,12 +62,18 @@ function Chat() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatUser, setChatUser] = useState<ChatUser | null>(null);
-  const [isTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showAttachments, setShowAttachments] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const lastTypingEmitRef = useRef<number>(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
+  const isAtBottomRef = useRef<boolean>(true);
 
   // Upsert helper to avoid duplicates
   const upsertMessage = (incoming: Message) => {
@@ -72,6 +82,30 @@ function Chat() {
       if (exists) return prev.map((m) => (m._id === incoming._id ? incoming : m));
       return [...prev, incoming];
     });
+  };
+
+  // Emit typing events (throttled)
+  const emitTyping = () => {
+    if (!socketRef.current || !chatUser || !currentUser) return;
+    const now = Date.now();
+    if (now - lastTypingEmitRef.current < 500) return; // throttle
+    lastTypingEmitRef.current = now;
+    socketRef.current.emit('typing', { senderId: currentUser._id, recipientId: chatUser._id });
+  };
+
+  // Retry sending a failed optimistic message
+  const retrySend = async (tempId: string, content: string) => {
+    if (!chatUser) return;
+    try {
+      // set back to sending
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'sending' } : m));
+      const res = await apiService.sendMessage(chatUser._id, content);
+      const confirmed = res.message as Message;
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...confirmed, status: 'sent' } : m));
+      scrollToBottom();
+    } catch (e) {
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'failed' } : m));
+    }
   };
 
   useEffect(() => {
@@ -92,6 +126,11 @@ function Chat() {
         (newMessage.sender._id === currentUser?._id && newMessage.recipient._id === chatUser?._id);
       if (!isForThisChat) return;
       upsertMessage(newMessage);
+      if (isAtBottomRef.current) {
+        scrollToBottom();
+      } else {
+        setShowNewMessageNotice(true);
+      }
     });
 
     // Listen for message sent confirmation
@@ -101,6 +140,21 @@ function Chat() {
         (sentMessage.sender._id === currentUser?._id && sentMessage.recipient._id === chatUser?._id);
       if (!isForThisChat) return;
       upsertMessage(sentMessage);
+      if (isAtBottomRef.current) {
+        scrollToBottom();
+      } else {
+        setShowNewMessageNotice(true);
+      }
+    });
+
+    // Listen for typing indicator
+    socket.on('typing', (payload: { senderId: string; recipientId: string }) => {
+      if (!chatUser || !currentUser) return;
+      const isForThisChat = payload.senderId === chatUser._id && payload.recipientId === currentUser._id;
+      if (!isForThisChat) return;
+      setIsTyping(true);
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = window.setTimeout(() => setIsTyping(false), 2000);
     });
 
     // Fetch chat user and messages
@@ -109,12 +163,33 @@ function Chat() {
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
     };
-  }, [username, currentUser]);
+  }, [username, currentUser, chatUser]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Track scroll position to know if user is at bottom
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+      setIsAtBottom(nearBottom);
+      if (nearBottom) setShowNewMessageNotice(false);
+    };
+    el.addEventListener('scroll', onScroll);
+    // Init state
+    onScroll();
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // keep ref in sync
+  useEffect(() => {
+    isAtBottomRef.current = isAtBottom;
+  }, [isAtBottom]);
 
   const fetchChatData = async () => {
     if (!username) return;
@@ -166,6 +241,7 @@ function Chat() {
         messageType: "text",
         isRead: false,
         createdAt: new Date().toISOString(),
+        status: 'sending',
       };
       setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
@@ -173,11 +249,11 @@ function Chat() {
       // Send to server
       const res = await apiService.sendMessage(chatUser._id, messageContent);
       const confirmed = res.message as Message;
-      setMessages((prev) => prev.map((m) => (m._id === tempId ? confirmed : m)));
+      setMessages((prev) => prev.map((m) => (m._id === tempId ? { ...confirmed, status: 'sent' } : m)));
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Rollback optimistic message if it exists
-      setMessages((prev) => prev.filter((m) => !m._id.endsWith('-tmp')));
+      // Mark last optimistic as failed
+      setMessages((prev) => prev.map((m) => (m._id.endsWith('-tmp') ? { ...m, status: 'failed' } : m)));
       setMessage(message); // Restore input on error
     }
   };
@@ -296,7 +372,7 @@ function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-28">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-28">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
@@ -334,7 +410,20 @@ function Chat() {
                   >
                     <span className="text-xs">{formatTime(msg.createdAt)}</span>
                     {msg.sender._id === currentUser?._id && (
-                      <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                      msg.status === 'sending' ? (
+                        <RotateCw className="w-3 h-3 animate-spin text-blue-200" />
+                      ) : msg.status === 'failed' ? (
+                        <button
+                          className="flex items-center gap-1 text-red-200 hover:text-red-100"
+                          onClick={() => retrySend(msg._id, msg.content)}
+                          title="Tap to retry"
+                        >
+                          <AlertCircle className="w-3 h-3" />
+                          <span className="text-[10px]">Retry</span>
+                        </button>
+                      ) : (
+                        <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                      )
                     )}
                   </div>
                 </div>
@@ -367,6 +456,17 @@ function Chat() {
 
       {/* Input Area */}
       <div className="bg-white border-t border-gray-200 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)]">
+        {/* New message notice when not at bottom */}
+        {showNewMessageNotice && (
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+            <button
+              onClick={() => { scrollToBottom(); setShowNewMessageNotice(false); }}
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full shadow-md hover:bg-blue-700"
+            >
+              New message • Tap to view
+            </button>
+          </div>
+        )}
         {/* Attachment Popup */}
         {showAttachments && (
           <>
@@ -435,7 +535,7 @@ function Chat() {
                 <div className="flex-1">
                   <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => { setMessage(e.target.value); emitTyping(); }}
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
                     onKeyPress={handleKeyPress}
