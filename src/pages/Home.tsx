@@ -6,6 +6,8 @@ import SidebarRight from "../components/SidebarRight";
 import Stories from "../components/Stories";
 import CreatePost from "../components/CreatePost";
 import PostsFeed from "../components/PostsFeed";
+import PostSkeleton from "../components/PostSkeleton";
+import useInfiniteScroll from "../hooks/useInfiniteScroll";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import "../App.css";
 import { apiService } from "../lib/api";
@@ -180,6 +182,10 @@ const UPLOAD_PRESET =
 function Home() {
   // 2. Type posts as Post[]
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [postContent, setPostContent] = useState("");
   const [previewImage, setPreviewImage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
@@ -198,43 +204,50 @@ function Home() {
   }, [user]);
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchInitialPosts = async () => {
+      setInitialLoading(true);
+      setLoadingError(null);
       try {
-        const res = await apiService.getPosts();
-        setPosts(
-          res.posts.map(
-            (post: BackendPost): FeedPost => ({
-              authorId: post.user?._id || '',
-              id: post._id,
-              user: post.user?.fullName || "Anonymous",
-              username: post.user?.username || "anonymous",
-              avatar:
-                post.user?.avatar ||
-                "https://randomuser.me/api/portraits/men/1.jpg",
-              content: post.content,
-              time: new Date(post.createdAt).toLocaleString(),
-              image: post.image,
-              likes: post.likes.length,
-              comments: post.comments.length,
-              shares: 0,
-              views: 0,
-              isLiked: user ? post.likes.includes(user._id) : false,
-              isBookmarked: false,
-              isVerified: post.user?.isVerified || false,
-              engagement: 0,
-              trending: undefined,
-              category: undefined,
-              commentList: (post.comments as BackendComment[]).map(
-                mapBackendCommentToFeedComment
-              ),
-            })
-          )
+        const res = await apiService.getPostsPaginated(1, 5);
+        const mapped = res.posts.map(
+          (post: BackendPost): FeedPost => ({
+            authorId: post.user?._id || '',
+            id: post._id,
+            user: post.user?.fullName || "Anonymous",
+            username: post.user?.username || "anonymous",
+            avatar:
+              post.user?.avatar ||
+              "https://randomuser.me/api/portraits/men/1.jpg",
+            content: post.content,
+            time: new Date(post.createdAt).toLocaleString(),
+            image: post.image,
+            likes: post.likes.length,
+            comments: post.comments.length,
+            shares: 0,
+            views: 0,
+            isLiked: user ? post.likes.includes(user._id) : false,
+            isBookmarked: false,
+            isVerified: post.user?.isVerified || false,
+            engagement: 0,
+            trending: undefined,
+            category: undefined,
+            commentList: (post.comments as BackendComment[]).map(
+              mapBackendCommentToFeedComment
+            ),
+          })
         );
-      } catch {
-        // Optionally handle error
+        setPosts(mapped);
+        setHasMore(res.pagination?.hasMore ?? false);
+        setCurrentPage(1);
+      } catch (e) {
+        setLoadingError("Failed to load posts");
+      } finally {
+        setInitialLoading(false);
       }
     };
-    fetchPosts();
+
+    fetchInitialPosts();
+
     // Socket.IO real-time updates
     const socket: Socket = socketIOClient(SOCKET_URL);
     socket.on("postUpdated", (updatedPost: BackendPost) => {
@@ -258,6 +271,49 @@ function Home() {
       socket.disconnect();
     };
   }, [user]);
+
+  // Infinite scroll loader
+  const loadMorePosts = async () => {
+    if (!hasMore) return;
+    try {
+      const nextPage = currentPage + 1;
+      const res = await apiService.getPostsPaginated(nextPage, 5);
+      const mapped = res.posts.map(
+        (post: BackendPost): FeedPost => ({
+          authorId: post.user?._id || '',
+          id: post._id,
+          user: post.user?.fullName || "Anonymous",
+          username: post.user?.username || "anonymous",
+          avatar:
+            post.user?.avatar ||
+            "https://randomuser.me/api/portraits/men/1.jpg",
+          content: post.content,
+          time: new Date(post.createdAt).toLocaleString(),
+          image: post.image,
+          likes: post.likes.length,
+          comments: post.comments.length,
+          shares: 0,
+          views: 0,
+          isLiked: user ? post.likes.includes(user._id) : false,
+          isBookmarked: false,
+          isVerified: post.user?.isVerified || false,
+          engagement: 0,
+          trending: undefined,
+          category: undefined,
+          commentList: (post.comments as BackendComment[]).map(
+            mapBackendCommentToFeedComment
+          ),
+        })
+      );
+      setPosts((prev) => [...prev, ...mapped]);
+      setCurrentPage(nextPage);
+      setHasMore(res.pagination?.hasMore ?? false);
+    } catch (e) {
+      setLoadingError("Failed to load more posts");
+    }
+  };
+
+  const { isFetching } = useInfiniteScroll(loadMorePosts);
 
   const handlePostSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -641,16 +697,30 @@ function Home() {
 
             {/* Posts Feed */}
             <div className="space-y-6">
-              <PostsFeed
-                posts={posts}
-                formatNumber={formatNumber}
-                handleLike={handleLike}
-                handleBookmark={handleBookmark}
-                onAddComment={handleAddComment}
-                commentInputs={commentInputs}
-                setCommentInputs={setCommentInputs}
-                onFollow={handleFollow}
-              />
+              {initialLoading && (
+                <PostSkeleton count={5} />
+              )}
+              {!initialLoading && posts.length > 0 && (
+                <PostsFeed
+                  posts={posts}
+                  formatNumber={formatNumber}
+                  handleLike={handleLike}
+                  handleBookmark={handleBookmark}
+                  onAddComment={handleAddComment}
+                  commentInputs={commentInputs}
+                  setCommentInputs={setCommentInputs}
+                  onFollow={handleFollow}
+                />
+              )}
+              {loadingError && (
+                <div className="text-center text-sm text-red-500">{loadingError}</div>
+              )}
+              {isFetching && !initialLoading && (
+                <PostSkeleton count={3} />
+              )}
+              {!hasMore && !initialLoading && (
+                <div className="text-center text-xs text-gray-500 py-4">You\'re all caught up</div>
+              )}
             </div>
           </div>
 
