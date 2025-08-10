@@ -8,6 +8,7 @@ import Chat from "./pages/Chat";
 import Alert from "./pages/Alert";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import OAuthCallback from "./pages/OAuthCallback";
 import { usePreloader } from "./hooks/usePreloader";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/ui/toast";
@@ -77,6 +78,14 @@ function App() {
                 element={
                   <PublicRoute>
                     <Signup />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/oauth/callback"
+                element={
+                  <PublicRoute>
+                    <OAuthCallback />
                   </PublicRoute>
                 }
               />

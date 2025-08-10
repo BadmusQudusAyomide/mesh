@@ -12,7 +12,6 @@ import {
   ChevronDown,
   X,
   Check,
-  Eye,
 } from "lucide-react";
 import Navigation from "../components/Navigation";
 import { useAuth } from "../contexts/AuthContextHelpers";
@@ -77,8 +76,6 @@ const Alert: React.FC = () => {
         return <Share2 className="w-4 h-4 text-orange-500" />;
       case "bookmark":
         return <Bookmark className="w-4 h-4 text-blue-500" />;
-      case "view":
-        return <Eye className="w-4 h-4 text-gray-500" />;
       default:
         return <Bell className="w-4 h-4 text-gray-500" />;
     }
@@ -363,12 +360,9 @@ const Alert: React.FC = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <div className="flex items-center space-x-1 mb-1">
+                                    <div className="flex items-center space-x-2 mb-1">
                                       <span className="font-semibold text-gray-900 text-sm">
-                                        {alert.from.fullName}
-                                      </span>
-                                      <span className="text-gray-500 text-sm">
-                                        @{alert.from.username}
+                                        {(alert.from.fullName || '').split(' ')[0]}
                                       </span>
                                       <span className="text-gray-400">·</span>
                                       <span className="text-gray-500 text-sm">
@@ -407,16 +401,13 @@ const Alert: React.FC = () => {
                                       >
                                         {alert.isRead ? "Read" : "Mark as read"}
                                       </button>
-                                      <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
-                                        View
-                                      </button>
                                       {alert.type === "follow" && alert.from?._id && (
                                         <button
                                           onClick={() => handleFollowBack(alert.from._id)}
-                                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all shadow-sm ${
                                             isFollowingUser(alert.from._id)
-                                              ? "bg-gray-100 text-gray-700"
-                                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                                              ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                              : "bg-green-600 text-white hover:bg-green-700"
                                           }`}
                                         >
                                           {isFollowingUser(alert.from._id) ? "Following" : "Follow back"}
@@ -427,9 +418,6 @@ const Alert: React.FC = () => {
                                   
                                   {/* Action menu */}
                                   <div className="flex items-center space-x-1 ml-3">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                                      <Eye className="w-4 h-4" />
-                                    </button>
                                     <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                                       <MoreHorizontal className="w-4 h-4" />
                                     </button>
