@@ -124,11 +124,40 @@ function Chat() {
     try {
       const messageContent = message.trim();
       setMessage("");
-      
-      await apiService.sendMessage(chatUser._id, messageContent);
+
+      // Optimistic message
+      const tempId = `${Date.now()}-tmp`;
+      const optimistic: Message = {
+        _id: tempId,
+        sender: {
+          _id: currentUser._id,
+          username: currentUser.username,
+          fullName: currentUser.fullName,
+          avatar: currentUser.avatar,
+        },
+        recipient: {
+          _id: chatUser._id,
+          username: chatUser.username,
+          fullName: chatUser.fullName,
+          avatar: chatUser.avatar,
+        },
+        content: messageContent,
+        messageType: "text",
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, optimistic]);
+      scrollToBottom();
+
+      // Send to server
+      const res = await apiService.sendMessage(chatUser._id, messageContent);
+      const confirmed = res.message as Message;
+      setMessages((prev) => prev.map((m) => (m._id === tempId ? confirmed : m)));
     } catch (error) {
       console.error('Failed to send message:', error);
-      setMessage(message); // Restore message on error
+      // Rollback optimistic message if it exists
+      setMessages((prev) => prev.filter((m) => !m._id.endsWith('-tmp')));
+      setMessage(message); // Restore input on error
     }
   };
 
@@ -205,7 +234,7 @@ function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
@@ -246,7 +275,7 @@ function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-28">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
@@ -316,7 +345,7 @@ function Chat() {
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 relative">
+      <div className="bg-white border-t border-gray-200 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)]">
         {/* Attachment Popup */}
         {showAttachments && (
           <>
