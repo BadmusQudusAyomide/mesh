@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
 import Chat from "./pages/Chat";
+import Friends from "./pages/Friends";
 
 import Alert from "./pages/Alert";
 import Login from "./pages/Login";
@@ -83,6 +84,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Follow />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <ProtectedRoute>
+                    <Friends />
                   </ProtectedRoute>
                 }
               />

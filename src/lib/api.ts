@@ -299,6 +299,14 @@ class ApiService {
   async getUserSuggestions(limit: number = 5): Promise<{ suggestions: User[] }> {
     return this.request<{ suggestions: User[] }>(`/auth/suggestions?limit=${limit}`, { method: 'GET' });
   }
+
+  async listUsers(params: { query?: string; page?: number; limit?: number } = {}): Promise<{ users: User[]; page: number; totalPages: number; total: number; hasMore: boolean }> {
+    const q = encodeURIComponent(params.query ?? '');
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 10;
+    const queryStr = `query=${q}&page=${page}&limit=${limit}`;
+    return this.request<{ users: User[]; page: number; totalPages: number; total: number; hasMore: boolean }>(`/auth/users?${queryStr}`, { method: 'GET' });
+  }
 }
 
 // Create and export a singleton instance
