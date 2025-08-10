@@ -426,7 +426,7 @@ function Profile() {
         engagement: 0,
         trending: undefined,
         category: undefined,
-        commentList: (post.comments || []).map((c) => ({
+        commentList: (post.comments || []).map((c: any) => ({
           id: c._id,
           user: {
             id: c.user._id,
@@ -473,7 +473,7 @@ function Profile() {
         engagement: 0,
         trending: undefined,
         category: undefined,
-        commentList: (post.comments || []).map((c) => ({
+        commentList: (post.comments || []).map((c: any) => ({
           id: c._id,
           user: {
             id: c.user._id,

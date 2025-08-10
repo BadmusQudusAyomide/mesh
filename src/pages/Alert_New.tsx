@@ -6,7 +6,6 @@ import {
   UserPlus,
   AtSign,
   Share2,
-  Settings,
   MoreHorizontal,
   Filter,
   ChevronDown,
