@@ -1046,18 +1046,24 @@ function Profile() {
               </div>
 
               <div className="flex space-x-6">
-                <div className="text-center">
+                <Link
+                  to={`/profile/${profileUser?.username}/follow?tab=following`}
+                  className="text-center hover:opacity-80 transition"
+                >
                   <div className="font-bold text-xl text-gray-800">
                     {formatNumber(profileUser?.followingCount || 0)}
                   </div>
                   <div className="text-sm text-gray-600">Following</div>
-                </div>
-                <div className="text-center">
+                </Link>
+                <Link
+                  to={`/profile/${profileUser?.username}/follow?tab=followers`}
+                  className="text-center hover:opacity-80 transition"
+                >
                   <div className="font-bold text-xl text-gray-800">
                     {formatNumber(profileUser?.followerCount || 0)}
                   </div>
                   <div className="text-sm text-gray-600">Followers</div>
-                </div>
+                </Link>
                 <div className="text-center">
                   <div className="font-bold text-xl text-gray-800">
                     {formatNumber(profileUser?.postCount || 0)}
