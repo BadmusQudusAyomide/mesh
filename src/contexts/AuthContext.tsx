@@ -98,6 +98,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Accept token from OAuth callback and finalize login
+  const oauthLogin = async (token: string) => {
+    try {
+      if (!token || token.trim() === "") throw new Error("Missing token");
+      apiService.setToken(token);
+      const { user } = await apiService.getCurrentUser();
+      setUser(user);
+      if (user && (user as any)._id) {
+        localStorage.setItem("userId", (user as any)._id as string);
+      }
+    } catch (error) {
+      apiService.clearToken();
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -106,6 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateUser,
+    oauthLogin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
