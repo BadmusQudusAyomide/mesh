@@ -22,6 +22,8 @@ export default function Follow() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = (searchParams.get("tab") as TabKey) || "followers";
   const [tab, setTab] = useState<TabKey>(initialTab);
+  const [activeTabNav, setActiveTabNav] = useState<string>("home");
+  const [darkMode, setDarkMode] = useState<boolean>(false);
 
   const [followers, setFollowers] = useState<LiteUser[]>([]);
   const [following, setFollowing] = useState<LiteUser[]>([]);
@@ -122,7 +124,12 @@ export default function Follow() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
+      <Navigation
+        activeTab={activeTabNav}
+        setActiveTab={setActiveTabNav}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200">
