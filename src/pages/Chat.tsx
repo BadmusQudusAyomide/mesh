@@ -74,6 +74,9 @@ function Chat() {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
   const isAtBottomRef = useRef<boolean>(true);
+  // Keep latest IDs to avoid effect re-binding
+  const chatUserIdRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // Upsert helper to avoid duplicates
   const upsertMessage = (incoming: Message) => {
@@ -108,64 +111,87 @@ function Chat() {
     }
   };
 
+  // Keep refs in sync
   useEffect(() => {
-    if (!username || !currentUser) return;
+    chatUserIdRef.current = chatUser?._id ?? null;
+  }, [chatUser]);
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?._id ?? null;
+  }, [currentUser]);
 
-    // Initialize socket connection
+  // Initialize socket once per session user
+  useEffect(() => {
+    if (!currentUser) return;
     const socket = socketIOClient(SOCKET_URL);
     socketRef.current = socket;
-
-    // Join user's room
     socket.emit('join', currentUser._id);
 
-    // Listen for new messages
-    socket.on('newMessage', (newMessage: Message) => {
-      // Only process messages for this chat (between currentUser and chatUser)
-      const isForThisChat =
-        (newMessage.sender._id === chatUser?._id && newMessage.recipient._id === currentUser?._id) ||
-        (newMessage.sender._id === currentUser?._id && newMessage.recipient._id === chatUser?._id);
-      if (!isForThisChat) return;
+    const handleNewMessage = (newMessage: Message) => {
+      const me = currentUserIdRef.current;
+      const other = chatUserIdRef.current;
+      const ok = !!me && !!other && (
+        (newMessage.sender._id === other && newMessage.recipient._id === me) ||
+        (newMessage.sender._id === me && newMessage.recipient._id === other)
+      );
+      if (!ok) return;
       upsertMessage(newMessage);
-      if (isAtBottomRef.current) {
-        scrollToBottom();
-      } else {
-        setShowNewMessageNotice(true);
-      }
-    });
+      if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
+    };
 
-    // Listen for message sent confirmation
-    socket.on('messageSent', (sentMessage: Message) => {
-      const isForThisChat =
-        (sentMessage.sender._id === chatUser?._id && sentMessage.recipient._id === currentUser?._id) ||
-        (sentMessage.sender._id === currentUser?._id && sentMessage.recipient._id === chatUser?._id);
-      if (!isForThisChat) return;
+    const handleMessageSent = (sentMessage: Message) => {
+      const me = currentUserIdRef.current;
+      const other = chatUserIdRef.current;
+      const ok = !!me && !!other && (
+        (sentMessage.sender._id === other && sentMessage.recipient._id === me) ||
+        (sentMessage.sender._id === me && sentMessage.recipient._id === other)
+      );
+      if (!ok) return;
       upsertMessage(sentMessage);
-      if (isAtBottomRef.current) {
-        scrollToBottom();
-      } else {
-        setShowNewMessageNotice(true);
-      }
-    });
+      if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
+    };
 
-    // Listen for typing indicator
-    socket.on('typing', (payload: { senderId: string; recipientId: string }) => {
-      if (!chatUser || !currentUser) return;
-      const isForThisChat = payload.senderId === chatUser._id && payload.recipientId === currentUser._id;
-      if (!isForThisChat) return;
+    const handleTyping = (payload: { senderId: string; recipientId: string }) => {
+      const me = currentUserIdRef.current;
+      const other = chatUserIdRef.current;
+      const ok = !!me && !!other && payload.senderId === other && payload.recipientId === me;
+      if (!ok) return;
       setIsTyping(true);
       if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = window.setTimeout(() => setIsTyping(false), 2000);
-    });
+    };
 
-    // Fetch chat user and messages
-    fetchChatData();
+    socket.on('newMessage', handleNewMessage);
+    socket.on('messageSent', handleMessageSent);
+    socket.on('typing', handleTyping);
 
     return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('messageSent', handleMessageSent);
+      socket.off('typing', handleTyping);
       socket.disconnect();
       socketRef.current = null;
       if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
     };
-  }, [username, currentUser, chatUser]);
+  }, [currentUser]);
+
+  // Fetch chat user and initial messages when username changes
+  useEffect(() => {
+    const run = async () => {
+      if (!username) return;
+      try {
+        setIsLoading(true);
+        const userProfile = await apiService.getUserProfile(username);
+        setChatUser(userProfile.user);
+        const messagesResponse = await apiService.getMessages(userProfile.user._id);
+        setMessages(messagesResponse.messages);
+      } catch (err) {
+        console.error('Failed to fetch chat data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    run();
+  }, [username]);
 
   useEffect(() => {
     scrollToBottom();
