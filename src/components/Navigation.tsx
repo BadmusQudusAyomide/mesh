@@ -24,8 +24,6 @@ interface NavigationProps {
 }
 
 const Navigation = ({
-  activeTab,
-  setActiveTab,
   darkMode,
   setDarkMode,
   hideBottomBar,

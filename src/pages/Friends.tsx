@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Navigation from "../components/Navigation";
 import { apiService } from "../lib/api";
 import { useAuth } from "../contexts/AuthContextHelpers";
-import { Check, UserPlus, UserMinus, Search as SearchIcon, Users as UsersIcon } from "lucide-react";
+import { UserPlus, UserMinus, Search as SearchIcon, Users as UsersIcon } from "lucide-react";
 
 interface FriendItem {
   _id: string;
