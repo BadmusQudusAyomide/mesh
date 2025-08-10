@@ -146,7 +146,32 @@ function Chat() {
         (sentMessage.sender._id === me && sentMessage.recipient._id === other)
       );
       if (!ok) return;
-      upsertMessage(sentMessage);
+
+      setMessages(prev => {
+        // If message already present by id, just ensure it's updated
+        const existsById = prev.some(m => m._id === sentMessage._id);
+        if (existsById) {
+          return prev.map(m => m._id === sentMessage._id ? { ...sentMessage, status: 'sent' } : m);
+        }
+
+        // Try to replace a matching optimistic temp from this sender to this recipient with same content
+        const idx = [...prev].reverse().findIndex(m =>
+          m.status === 'sending' &&
+          m.sender._id === me &&
+          m.recipient._id === other &&
+          m.content === sentMessage.content
+        );
+        if (idx !== -1) {
+          const realIdx = prev.length - 1 - idx;
+          const next = prev.slice();
+          next[realIdx] = { ...sentMessage, status: 'sent' } as Message;
+          return next;
+        }
+
+        // Fallback: append
+        return [...prev, { ...sentMessage, status: 'sent' } as Message];
+      });
+
       if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
     };
 
