@@ -1,5 +1,6 @@
 import Post from "./Post";
 import { useAuth } from "../contexts/AuthContextHelpers";
+import { useMemo } from "react";
 
 
 interface FeedPost {
@@ -59,6 +60,10 @@ const PostsFeed = ({
 }: PostsFeedProps) => {
   const { user } = useAuth();
 
+  const followingSet = useMemo(() => {
+    return new Set((user?.following || []).map((id: any) => id.toString()));
+  }, [user?.following]);
+
   return (
     <div className="space-y-4 w-full max-w-2xl mx-auto">
       {posts.map((post) => (
@@ -77,7 +82,7 @@ const PostsFeed = ({
                   setCommentInputs((inputs) => ({ ...inputs, [post.id]: val }))
               : undefined
           }
-          isFollowing={user?.following?.map(id => id.toString()).includes(post.authorId?.toString() || '')}
+          isFollowing={followingSet.has(post.authorId?.toString() || '')}
           onFollow={onFollow}
         />
       ))}

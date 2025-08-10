@@ -15,7 +15,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
 
 interface Post {
@@ -104,7 +104,7 @@ const Post = ({
 
   // Remove handleAddComment, handleCommentLike, handleReply logic for local state
 
-  const menuOptions = [
+  const menuOptions = useMemo(() => [
     {
       icon: FlagIcon,
       label: "Report post",
@@ -152,7 +152,7 @@ const Post = ({
       action: () => console.log("Delete post"),
       danger: true,
     },
-  ];
+  ], [isFollowing, onFollow, userId, post.authorId]);
 
   // Add submit handler for comment
   const handleCommentSubmit = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -207,6 +207,8 @@ const Post = ({
                 <img
                   src={post.avatar}
                   alt={post.user}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-lg group-hover:brightness-95 transition"
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -288,6 +290,8 @@ const Post = ({
             <img
               src={post.image}
               alt="Post content"
+              loading="lazy"
+              decoding="async"
               className="w-full h-auto max-h-[500px] object-cover hover:scale-105 transition-transform duration-300"
             />
           </div>
@@ -366,6 +370,8 @@ const Post = ({
                 <img
                   src={post.commentList[0].user.avatar}
                   alt={post.commentList[0].user.fullName}
+                  loading="lazy"
+                  decoding="async"
                   className="w-8 h-8 rounded-full object-cover"
                 />
               </Link>
@@ -395,6 +401,8 @@ const Post = ({
             <img
               src="https://randomuser.me/api/portraits/men/1.jpg"
               alt="You"
+              loading="lazy"
+              decoding="async"
               className="w-8 h-8 rounded-full object-cover"
             />
             <div className="flex-1 relative">
@@ -616,4 +624,4 @@ const Post = ({
   );
 };
 
-export default Post;
+export default memo(Post);
