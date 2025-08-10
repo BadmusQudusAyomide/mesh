@@ -4,6 +4,7 @@ import {
   Bell,
   Mail,
   User,
+  Users,
   Zap,
   Sun,
   Moon,
@@ -176,6 +177,18 @@ const Navigation = ({
                 </Link>
 
                 <Link
+                  to="/friends"
+                  className={`flex flex-col items-center px-4 py-2 rounded-2xl transition-all duration-300 transform hover:scale-110 ${
+                    location.pathname === "/friends"
+                      ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <Users className={`w-6 h-6 mb-1 ${location.pathname === "/friends" ? "drop-shadow-sm" : ""}`} />
+                  <span className="text-xs font-medium">Friends</span>
+                </Link>
+
+                <Link
                   to="/inbox"
                   className={`flex flex-col items-center px-4 py-2 rounded-2xl transition-all duration-300 transform hover:scale-110 ${
                     location.pathname === "/inbox"
@@ -204,15 +217,6 @@ const Navigation = ({
                   )}
                   <span className="text-xs font-medium">Me</span>
                 </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex flex-col items-center px-4 py-2 rounded-2xl text-gray-600 hover:bg-red-50 hover:text-red-500 transition-all duration-300 transform hover:scale-110"
-                  title="Logout"
-                >
-                  <LogOut className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-medium">Logout</span>
-                </button>
               </div>
             </div>
           </div>
