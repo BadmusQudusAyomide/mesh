@@ -217,25 +217,6 @@ function Chat() {
     isAtBottomRef.current = isAtBottom;
   }, [isAtBottom]);
 
-  const fetchChatData = async () => {
-    if (!username) return;
-    
-    try {
-      setIsLoading(true);
-      // Get user profile
-      const userProfile = await apiService.getUserProfile(username);
-      setChatUser(userProfile.user);
-      
-      // Get messages
-      const messagesResponse = await apiService.getMessages(userProfile.user._id);
-      setMessages(messagesResponse.messages);
-    } catch (error) {
-      console.error('Failed to fetch chat data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
