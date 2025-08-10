@@ -54,29 +54,9 @@ const trendingTopics = [
 
 // Stories feature not implemented yet: show placeholder in component
 
-const whoToFollow = [
-  {
-    name: "Ngozi Okonjo",
-    username: "ngoziok",
-    avatar: "https://randomuser.me/api/portraits/women/42.jpg",
-    verified: true,
-    followers: "125K",
-  },
-  {
-    name: "Tunde Bakare",
-    username: "tundebakare",
-    avatar: "https://randomuser.me/api/portraits/men/33.jpg",
-    verified: true,
-    followers: "89K",
-  },
-  {
-    name: "Chiamaka Eze",
-    username: "chiamakaeze",
-    avatar: "https://randomuser.me/api/portraits/women/51.jpg",
-    verified: false,
-    followers: "45K",
-  },
-];
+// Who to follow (loaded from backend mutual followers)
+type WhoToFollowItem = { name: string; username: string; avatar: string; verified: boolean; followers?: string };
+const numberFormat = (n: number) => (n >= 1000000 ? (n/1000000).toFixed(1) + "M" : n >= 1000 ? (n/1000).toFixed(1) + "K" : String(n));
 
 const liveEvents = [
   { title: "Tech Conference 2024", viewers: "12.5K", category: "Technology" },
@@ -154,6 +134,7 @@ function Home() {
   const [commentInputs, setCommentInputs] = useState<{
     [postId: string]: string;
   }>({});
+  const [whoToFollow, setWhoToFollow] = useState<WhoToFollowItem[]>([]);
   // 3. Get user from useAuth
   const { user, updateUser } = useAuth();
   // const [following, setFollowing] = useState<string[]>(user?.following || []);
@@ -230,6 +211,26 @@ function Home() {
       socket.disconnect();
     };
   }, [user]);
+
+  // Load who to follow (random new users, excluding following)
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      try {
+        const res = await apiService.getUserSuggestions(5);
+        const items = (res?.suggestions || []).map((u: any): WhoToFollowItem => ({
+          name: u.fullName || u.username,
+          username: u.username,
+          avatar: u.avatar,
+          verified: !!u.isVerified,
+          followers: typeof u.followerCount === 'number' ? numberFormat(u.followerCount) : undefined,
+        }));
+        setWhoToFollow(items);
+      } catch (e) {
+        // silent fail for sidebar suggestions
+      }
+    };
+    loadSuggestions();
+  }, []);
 
   // Infinite scroll loader
   const loadMorePosts = async () => {
@@ -543,6 +544,9 @@ function Home() {
                         avatar: "https://randomuser.me/api/portraits/men/1.jpg",
                       }
                 }
+                followerCount={user?.followerCount || 0}
+                followingCount={user?.followingCount || 0}
+                postCount={user?.postCount || 0}
               />
             </div>
           </div>

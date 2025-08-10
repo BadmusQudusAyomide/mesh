@@ -362,8 +362,11 @@ function Inbox() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-[60vw] sm:max-w-[30vw]">
-                                {conversation.user.fullName}
+                              <h3
+                                className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-[60vw] sm:max-w-[30vw]"
+                                title={conversation.user.fullName}
+                              >
+                                {(conversation.user.fullName || conversation.user.username).split(' ')[0]}
                               </h3>
                               {conversation.user.isOnline && (
                                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
@@ -497,8 +500,11 @@ function Inbox() {
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
                         <div className="flex-1 text-left">
-                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                            {user.fullName}
+                          <h4
+                            className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors"
+                            title={user.fullName}
+                          >
+                            {(user.fullName || user.username).split(' ')[0]}
                           </h4>
                           <p className="text-sm text-gray-500">@{user.username}</p>
                         </div>

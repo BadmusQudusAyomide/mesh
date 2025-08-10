@@ -9,9 +9,12 @@ interface TrendingTopic {
 interface SidebarLeftProps {
   trendingTopics: TrendingTopic[];
   user: { name: string; username: string; avatar: string };
+  followerCount?: number;
+  followingCount?: number;
+  postCount?: number;
 }
 
-const SidebarLeft = ({ trendingTopics, user }: SidebarLeftProps) => (
+const SidebarLeft = ({ trendingTopics, user, followerCount = 0, followingCount = 0, postCount = 0 }: SidebarLeftProps) => (
   <div className="lg:col-span-1 space-y-6">
     {/* Profile Card: only on md+ */}
     <div className="hidden md:block">
@@ -38,15 +41,15 @@ const SidebarLeft = ({ trendingTopics, user }: SidebarLeftProps) => (
         </div>
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center">
-            <div className="font-bold text-lg text-gray-800">2.5K</div>
+            <div className="font-bold text-lg text-gray-800">{new Intl.NumberFormat().format(followingCount)}</div>
             <div className="text-xs text-gray-600">Following</div>
           </div>
           <div className="text-center">
-            <div className="font-bold text-lg text-gray-800">15.2K</div>
+            <div className="font-bold text-lg text-gray-800">{new Intl.NumberFormat().format(followerCount)}</div>
             <div className="text-xs text-gray-600">Followers</div>
           </div>
           <div className="text-center">
-            <div className="font-bold text-lg text-gray-800">342</div>
+            <div className="font-bold text-lg text-gray-800">{new Intl.NumberFormat().format(postCount)}</div>
             <div className="text-xs text-gray-600">Posts</div>
           </div>
         </div>
