@@ -87,8 +87,8 @@ function Chat() {
         : [...prev, incoming];
       // de-duplicate by _id in case race conditions created duplicates
       const map = new Map<string, Message>();
-      for (const m of next) map.set(m._id, m);
-      return Array.from(map.values());
+      for (const m of next as Message[]) map.set(m._id, m);
+      return Array.from(map.values()) as Message[];
     });
   };
 
@@ -106,13 +106,13 @@ function Chat() {
     if (!chatUser) return;
     try {
       // set back to sending
-      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'sending' } : m));
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'sending' as const } : m));
       const res = await apiService.sendMessage(chatUser._id, content);
       const confirmed = res.message as Message;
-      setMessages(prev => prev.map(m => m._id === tempId ? { ...confirmed, status: 'sent' } : m));
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...confirmed, status: 'sent' as const } : m));
       scrollToBottom();
     } catch (e) {
-      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'failed' } : m));
+      setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'failed' as const } : m));
     }
   };
 
@@ -255,7 +255,7 @@ function Chat() {
         messageType: "text",
         isRead: false,
         createdAt: new Date().toISOString(),
-        status: 'sending',
+        status: 'sending' as const,
       };
       setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
@@ -267,13 +267,13 @@ function Chat() {
         const replaced = prev.map((m) => (m._id === tempId ? { ...confirmed, status: 'sent' } : m));
         // de-duplicate by _id to guard against a socket add that arrived first
         const map = new Map<string, Message>();
-        for (const m of replaced) map.set(m._id, m);
-        return Array.from(map.values());
+        for (const m of replaced as Message[]) map.set(m._id, m);
+        return Array.from(map.values()) as Message[];
       });
     } catch (error) {
       console.error('Failed to send message:', error);
       // Mark last optimistic as failed
-      setMessages((prev) => prev.map((m) => (m._id.endsWith('-tmp') ? { ...m, status: 'failed' } : m)));
+      setMessages((prev) => prev.map((m) => (m._id.endsWith('-tmp') ? { ...m, status: 'failed' as const } : m)));
       setMessage(message); // Restore input on error
     }
   };
