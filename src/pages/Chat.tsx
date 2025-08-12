@@ -81,9 +81,14 @@ function Chat() {
   // Upsert helper to avoid duplicates
   const upsertMessage = (incoming: Message) => {
     setMessages((prev) => {
-      const exists = prev.some((m) => m._id === incoming._id);
-      if (exists) return prev.map((m) => (m._id === incoming._id ? incoming : m));
-      return [...prev, incoming];
+      // replace if exists, otherwise append
+      const next = prev.some((m) => m._id === incoming._id)
+        ? prev.map((m) => (m._id === incoming._id ? incoming : m))
+        : [...prev, incoming];
+      // de-duplicate by _id in case race conditions created duplicates
+      const map = new Map<string, Message>();
+      for (const m of next) map.set(m._id, m);
+      return Array.from(map.values());
     });
   };
 
@@ -146,6 +151,8 @@ function Chat() {
         (sentMessage.sender._id === me && sentMessage.recipient._id === other)
       );
       if (!ok) return;
+      // If this event represents a message I sent, we already handle via API response.
+      if (sentMessage.sender._id === me) return;
       upsertMessage(sentMessage);
       if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
     };
@@ -256,7 +263,13 @@ function Chat() {
       // Send to server
       const res = await apiService.sendMessage(chatUser._id, messageContent);
       const confirmed = res.message as Message;
-      setMessages((prev) => prev.map((m) => (m._id === tempId ? { ...confirmed, status: 'sent' } : m)));
+      setMessages((prev) => {
+        const replaced = prev.map((m) => (m._id === tempId ? { ...confirmed, status: 'sent' } : m));
+        // de-duplicate by _id to guard against a socket add that arrived first
+        const map = new Map<string, Message>();
+        for (const m of replaced) map.set(m._id, m);
+        return Array.from(map.values());
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
       // Mark last optimistic as failed
