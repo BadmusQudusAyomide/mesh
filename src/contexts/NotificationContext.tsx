@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { io as socketIOClient, Socket } from "socket.io-client";
 import { apiService } from "../lib/api";
+import { ensurePushPermissionAndSubscribe } from "../lib/push";
 import { API_BASE_URL } from "../config";
 import type { Notification } from "../types";
 import { useAuth } from "./AuthContextHelpers";
@@ -17,6 +18,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!user || !user._id) return;
+    // Ask for permission and subscribe this device to push notifications
+    ensurePushPermissionAndSubscribe(user._id).catch((e: unknown) =>
+      console.warn("[NotificationProvider] Push subscribe failed:", e)
+    );
     let isMounted = true;
     const fetchNotifications = async () => {
       try {
