@@ -11,12 +11,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['vite.svg', 'icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json,webp,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.origin === self.location.origin,
+            urlPattern: ({ url }) => url.origin === (globalThis as any).location?.origin,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',
@@ -46,6 +46,18 @@ export default defineConfig({
             src: '/vite.svg',
             sizes: 'any',
             type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+          {
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'any maskable',
           },
         ],
