@@ -11,9 +11,11 @@ import {
   LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { useToast } from "../components/ui/toast";
 import { useNotifications } from "../contexts/NotificationContextHelpers";
+import { apiService } from "../lib/api";
 
 interface NavigationProps {
   activeTab: string;
@@ -32,6 +34,33 @@ const Navigation = ({
   const { logout, user } = useAuth();
   const { addToast } = useToast();
   const { unreadCount } = useNotifications();
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+
+  // Fetch unread messages count periodically
+  useEffect(() => {
+    let timer: number | undefined;
+    const fetchCount = async () => {
+      try {
+        if (!user?._id) return;
+        const res = await apiService.getUnreadMessagesCount();
+        setUnreadMessages(res.count || 0);
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchCount();
+    // Poll every 20s to keep badge fresh
+    timer = window.setInterval(fetchCount, 20000);
+    // Update when tab becomes visible
+    const onVis = () => {
+      if (document.visibilityState === "visible") fetchCount();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      if (timer) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [user?._id]);
 
   const handleLogout = async () => {
     try {
@@ -91,13 +120,18 @@ const Navigation = ({
             </Link>
             <Link
               to="/inbox"
-              className={`p-2 rounded-xl transition-all duration-200 ${
+              className={`p-2 rounded-xl transition-all duration-200 relative ${
                 location.pathname === "/inbox"
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-gray-600 hover:bg-white/20"
               }`}
             >
               <Mail className="w-5 h-5" />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                  {unreadMessages}
+                </span>
+              )}
             </Link>
             <Link
               to={user ? `/profile/${user.username}` : "/profile"}
@@ -188,7 +222,7 @@ const Navigation = ({
 
                 <Link
                   to="/inbox"
-                  className={`flex flex-col items-center px-4 py-2 rounded-2xl transition-all duration-300 transform hover:scale-110 ${
+                  className={`flex flex-col items-center px-4 py-2 rounded-2xl transition-all duration-300 transform hover:scale-110 relative ${
                     location.pathname === "/inbox"
                       ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg"
                       : "text-gray-600 hover:bg-gray-100"
@@ -196,6 +230,11 @@ const Navigation = ({
                 >
                   <Mail className={`w-6 h-6 mb-1 ${location.pathname === "/inbox" ? "drop-shadow-sm" : ""}`} />
                   <span className="text-xs font-medium">Inbox</span>
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center text-xs text-white font-bold shadow-lg animate-pulse">
+                      {unreadMessages}
+                    </span>
+                  )}
                 </Link>
 
                 <Link

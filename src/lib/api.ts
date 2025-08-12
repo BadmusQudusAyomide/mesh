@@ -140,6 +140,11 @@ class ApiService {
     });
   }
 
+  // Message: get total unread count
+  async getUnreadMessagesCount(): Promise<{ count: number }> {
+    return this.request<{ count: number }>(`/messages/unread-count/total`, { method: 'GET' });
+  }
+
   // Create a new post
   async createPost(data: { content: string; image?: string }): Promise<{ post: Post }> {
     return this.request<{ post: Post }>("/posts", {
