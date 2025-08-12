@@ -1,5 +1,7 @@
 /// <reference lib="webworker" />
 
+import { precacheAndRoute } from 'workbox-precaching'
+
 // This is the custom Service Worker used by VitePWA (injectManifest)
 // Precache will be injected into self.__WB_MANIFEST by the plugin at build time
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,6 +14,10 @@ self.addEventListener('install', (_event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())
 })
+
+// Required for injectManifest: this placeholder will be replaced at build time
+// by the list of assets to precache.
+precacheAndRoute(self.__WB_MANIFEST)
 
 // Handle incoming push messages
 self.addEventListener('push', (event: PushEvent) => {
