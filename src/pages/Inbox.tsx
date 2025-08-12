@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
 import useInfiniteScroll from "../hooks/useInfiniteScroll";
 import ConversationSkeleton from "../components/ConversationSkeleton";
+import socketIOClient from "socket.io-client";
 import {
   MessageCircle,
   Search,
@@ -17,6 +18,8 @@ import {
   Filter,
   ChevronDown,
 } from "lucide-react";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 interface Conversation {
   _id: string;
@@ -42,6 +45,7 @@ interface Conversation {
 function Inbox() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
 
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,6 +62,97 @@ function Inbox() {
   const [loadingMutualFollowers, setLoadingMutualFollowers] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterType, setFilterType] = useState("all");
+
+  // Setup Socket.IO for real-time conversation updates
+  useEffect(() => {
+    if (!currentUser?._id) return;
+    const socket = socketIOClient(SOCKET_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+    socketRef.current = socket;
+    socket.emit('join', currentUser._id);
+    socket.on('connect', () => {
+      socket.emit('join', currentUser._id);
+    });
+    socket.on('connect_error', (err) => {
+      console.error('[Inbox] Socket connect_error:', err?.message || err, 'URL:', SOCKET_URL);
+    });
+
+    const upsertConversationFromMessage = (msg: any) => {
+      if (!msg || !msg.sender || !msg.recipient) return;
+      const sender = msg.sender; // object with _id, username, fullName, avatar
+      const recipient = msg.recipient; // may be object or id
+      const recipientId = typeof recipient === 'object' ? recipient._id : recipient;
+      const isIncoming = recipientId?.toString() === currentUser._id.toString();
+      const otherUser = isIncoming ? sender : (typeof recipient === 'object' ? recipient : null);
+      const otherUserId = isIncoming ? sender._id : recipientId;
+      if (!otherUserId) return;
+
+      setConversations(prev => {
+        // find existing conversation
+        const idx = prev.findIndex(c => c._id === otherUserId);
+        const updatedLast = {
+          _id: msg._id,
+          content: msg.content,
+          messageType: msg.messageType || 'text',
+          createdAt: msg.createdAt || new Date().toISOString(),
+          isRead: !isIncoming, // if incoming, not read yet
+          sender: sender._id,
+        } as Conversation['lastMessage'];
+
+        if (idx !== -1) {
+          const copy = [...prev];
+          const conv = copy[idx];
+          const inc = isIncoming ? 1 : 0;
+          copy[idx] = {
+            ...conv,
+            lastMessage: updatedLast,
+            unreadCount: (conv.unreadCount || 0) + inc,
+          };
+          // move updated conversation to top
+          const [moved] = copy.splice(idx, 1);
+          return [moved, ...copy];
+        }
+
+        // Create new conversation entry
+        const other = otherUser || sender; // ensure we have details
+        const newConv: Conversation = {
+          _id: otherUserId,
+          user: {
+            _id: other._id,
+            username: other.username,
+            fullName: other.fullName,
+            avatar: other.avatar,
+            isOnline: !!other.isOnline,
+            lastActive: other.lastActive || new Date().toISOString(),
+          },
+          lastMessage: updatedLast,
+          unreadCount: isIncoming ? 1 : 0,
+        };
+        return [newConv, ...prev];
+      });
+    };
+
+    const handleNewMessage = (msg: any) => {
+      const involvesMe = [msg?.sender?._id, (typeof msg?.recipient === 'object' ? msg?.recipient?._id : msg?.recipient)]
+        .map(String)
+        .includes(String(currentUser._id));
+      if (!involvesMe) return;
+      upsertConversationFromMessage(msg);
+    };
+    const handleMessageSent = (msg: any) => handleNewMessage(msg);
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('messageSent', handleMessageSent);
+
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('messageSent', handleMessageSent);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [currentUser]);
 
   // Load more conversations function
   const loadMoreConversations = async () => {

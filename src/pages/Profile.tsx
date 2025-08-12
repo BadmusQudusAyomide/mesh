@@ -917,10 +917,10 @@ function Profile() {
               <AvatarPlaceholder className="w-10 h-10 rounded-xl" />
             )}
             <div>
-              <h1 className="font-bold text-lg text-gray-800">
+              <h1 className="font-bold text-lg text-gray-800 max-w-[60vw] truncate sm:max-w-none sm:whitespace-normal">
                 {profileUser?.fullName || "..."}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 max-w-[60vw] truncate sm:max-w-none sm:whitespace-normal">
                 {formatNumber(profileUser?.postCount || 0)} posts
               </p>
             </div>
@@ -991,13 +991,13 @@ function Profile() {
 
             <div className="space-y-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
-                  <span>{profileUser?.fullName || "..."}</span>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2 flex-wrap">
+                  <span className="break-words max-w-full leading-tight">{profileUser?.fullName || "..."}</span>
                   {profileUser?.isVerified && (
                     <Crown className="w-6 h-6 text-yellow-500" />
                   )}
                 </h2>
-                <p className="text-gray-600">@{profileUser?.username}</p>
+                <p className="text-gray-600 break-all sm:break-normal">@{profileUser?.username}</p>
               </div>
 
               {profileUser?.bio && (
