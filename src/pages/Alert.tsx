@@ -33,7 +33,7 @@ const Alert: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { markAsRead, markAllAsRead } = useNotifications();
+  const { notifications: liveNotifications, markAsRead, markAllAsRead } = useNotifications();
   const [loading, setLoading] = useState(false);
   const { user: authUser, updateUser } = useAuth();
 
@@ -68,6 +68,8 @@ const Alert: React.FC = () => {
         return <Heart className="w-4 h-4 text-red-500" />;
       case "comment":
         return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case "message":
+        return <MessageCircle className="w-4 h-4 text-blue-600" />;
       case "follow":
         return <UserPlus className="w-4 h-4 text-green-500" />;
       case "mention":
@@ -125,7 +127,12 @@ const Alert: React.FC = () => {
         setIsInitialLoading(true);
         setError(null);
         const response = await apiService.getNotificationsPaginated(1, 5);
-        setNotifications(response.notifications);
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n._id));
+          const toAdd = response.notifications.filter((n) => !existingIds.has(n._id));
+          // Keep already-present (including live) first, then append fetched unique
+          return [...prev, ...toAdd];
+        });
         setCurrentPage(2); // Next page to load
         setHasMore(response.pagination.hasMore);
       } catch (err) {
@@ -138,6 +145,17 @@ const Alert: React.FC = () => {
 
     loadInitialNotifications();
   }, []);
+
+  // Merge in live notifications from context at the top, avoiding duplicates
+  useEffect(() => {
+    if (!liveNotifications || liveNotifications.length === 0) return;
+    setNotifications((prev) => {
+      const seen = new Set(prev.map((n) => n._id));
+      const toPrepend = liveNotifications.filter((n) => !seen.has(n._id));
+      if (toPrepend.length === 0) return prev;
+      return [...toPrepend, ...prev];
+    });
+  }, [liveNotifications]);
 
   // Stop fetching when done loading
   useEffect(() => {
@@ -299,7 +317,7 @@ const Alert: React.FC = () => {
             ) : (
               <>
                 {/* Initial Loading State */}
-                {isInitialLoading ? (
+                {isInitialLoading && filteredAlerts.length === 0 ? (
                   <NotificationSkeleton count={5} />
                 ) : error ? (
                   <div className="text-center py-12">

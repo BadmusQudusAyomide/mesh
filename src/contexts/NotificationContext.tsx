@@ -32,13 +32,24 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       socketRef.current.disconnect();
     }
     // Socket.IO real-time notifications
-    const socket = socketIOClient(SOCKET_URL);
+    const socket = socketIOClient(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+    });
     socketRef.current = socket;
     socket.on("connect", () => {
       console.log("[NotificationProvider] Socket connected:", socket.id);
+      if (user?._id) socket.emit("join", user._id);
     });
     socket.on("disconnect", () => {
       console.log("[NotificationProvider] Socket disconnected");
+    });
+    socket.on("connect_error", (err) => {
+      console.error("[NotificationProvider] Socket connect_error:", err?.message || err, "URL:", SOCKET_URL);
     });
     socket.emit("join", user._id);
     console.log("[NotificationProvider] Emitted join for user:", user._id);
@@ -48,6 +59,35 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         notification
       );
       setNotifications((prev) => [notification, ...prev]);
+    });
+
+    // Also listen for new direct messages and surface them as notifications in Alerts
+    // Only add if the current user is the recipient
+    socket.on("newMessage", (msg: any) => {
+      try {
+        if (!msg || !msg.recipient || !msg.sender) return;
+        const recipientId = typeof msg.recipient === 'object' ? msg.recipient._id : msg.recipient;
+        if (recipientId?.toString() !== user._id?.toString()) return;
+        const fromUser = msg.sender;
+        const nameSource = fromUser.fullName || fromUser.username || 'Someone';
+        const firstName = (nameSource as string).trim().split(' ')[0] || nameSource;
+        const synthetic: Notification = {
+          _id: msg._id,
+          type: "message",
+          from: {
+            _id: fromUser._id,
+            fullName: fromUser.fullName || fromUser.username || "",
+            avatar: fromUser.avatar || "",
+            username: fromUser.username || "",
+          },
+          text: `${firstName} sent you a message`,
+          isRead: false,
+          createdAt: msg.createdAt || new Date().toISOString(),
+        } as Notification;
+        setNotifications((prev) => [synthetic, ...prev]);
+      } catch (e) {
+        console.warn("[NotificationProvider] Failed to synthesize message notification", e);
+      }
     });
     return () => {
       isMounted = false;
