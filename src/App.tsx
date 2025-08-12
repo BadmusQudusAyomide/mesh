@@ -12,6 +12,7 @@ import OAuthCallback from "./pages/OAuthCallback";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/ui/toast";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { InstallProvider } from "./contexts/InstallContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import SuccessPage from "./pages/SuccessPage";
@@ -26,6 +27,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <NotificationProvider>
+          <InstallProvider>
           <Router>
             
 
@@ -130,6 +132,7 @@ function App() {
               />
             </Routes>
           </Router>
+          </InstallProvider>
         </NotificationProvider>
       </ToastProvider>
     </AuthProvider>

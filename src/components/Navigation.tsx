@@ -9,6 +9,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Download,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import { useAuth } from "../contexts/AuthContextHelpers";
 import { useToast } from "../components/ui/toast";
 import { useNotifications } from "../contexts/NotificationContextHelpers";
 import { apiService } from "../lib/api";
+import { useInstall } from "../contexts/InstallContext";
 
 interface NavigationProps {
   activeTab: string;
@@ -35,6 +37,8 @@ const Navigation = ({
   const { addToast } = useToast();
   const { unreadCount } = useNotifications();
   const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const { canInstall, isStandalone, isIOS, promptInstall } = useInstall();
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   // Fetch unread messages count periodically
   useEffect(() => {
@@ -145,6 +149,27 @@ const Navigation = ({
             </Link>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Install button (desktop, non-intrusive) */}
+            {!isStandalone && (canInstall || isIOS) && (
+              <button
+                onClick={async () => {
+                  if (canInstall) {
+                    const res = await promptInstall();
+                    if (res === 'accepted') {
+                      addToast({ type: 'success', title: 'Installing', message: 'Mesh is being added to your device.' });
+                    } else if (res === 'dismissed') {
+                      addToast({ type: 'info', title: 'Install canceled', message: 'You can install Mesh anytime from this button.' });
+                    }
+                  } else if (isIOS) {
+                    setShowIOSGuide(true);
+                  }
+                }}
+                className="p-2 rounded-xl text-gray-600 hover:bg-white/20 transition-all duration-200"
+                title="Install Mesh"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -173,6 +198,27 @@ const Navigation = ({
           </div>
         </div>
       </nav>
+      {/* iOS Install Guide Modal */}
+      {showIOSGuide && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-[90%] p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Install Mesh on iPhone</h3>
+            <ol className="list-decimal ml-5 text-sm text-gray-700 space-y-1">
+              <li>Tap the Share button in Safari.</li>
+              <li>Select <span className="font-medium">Add to Home Screen</span>.</li>
+              <li>Tap <span className="font-medium">Add</span> to finish.</li>
+            </ol>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowIOSGuide(false)}
+                className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Bottom nav: only on mobile */}
       {!hideBottomBar && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
