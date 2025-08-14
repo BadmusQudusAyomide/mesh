@@ -254,6 +254,13 @@ function Inbox() {
     navigate(`/chat/${username}`);
   };
 
+  // Truncate helper to keep preview short and avoid layout shift
+  const truncatePreview = (text: string, max = 60) => {
+    if (!text) return "";
+    const clean = String(text).replace(/\n/g, " ").trim();
+    return clean.length > max ? clean.slice(0, max - 1) + "…" : clean;
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -472,9 +479,9 @@ function Inbox() {
                             </div>
                             {conversation.lastMessage && (
                               <div className="flex items-center justify-between">
-                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2">
+                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0">
                                   {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
-                                  {conversation.lastMessage.content}
+                                  {truncatePreview(conversation.lastMessage.content)}
                                 </p>
                                 <div className="flex items-center space-x-2 flex-shrink-0">
                                   <span className="text-xs text-gray-500">

@@ -42,6 +42,16 @@ interface Message {
   messageType: string;
   isRead: boolean;
   createdAt: string;
+  // optional reply link (populated)
+  replyTo?: {
+    _id: string;
+    content: string;
+    sender: { _id: string; username: string; fullName: string; avatar: string };
+  } | null;
+  // reactions array from backend
+  reactions?: { user: string; emoji: string; createdAt: string }[];
+  edited?: boolean;
+  editedAt?: string;
   // client-only status for optimistic updates
   status?: 'sending' | 'failed' | 'sent';
 }
@@ -66,6 +76,9 @@ function Chat() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAttachments, setShowAttachments] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
@@ -74,6 +87,8 @@ function Chat() {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
   const isAtBottomRef = useRef<boolean>(true);
+  const didInitialScrollRef = useRef<boolean>(false);
+  const lastUserScrollAtRef = useRef<number>(0);
   // Keep latest IDs to avoid effect re-binding
   const chatUserIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
@@ -140,7 +155,12 @@ function Chat() {
       );
       if (!ok) return;
       upsertMessage(newMessage);
-      if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
+      const idleMs = Date.now() - (lastUserScrollAtRef.current || 0);
+      if (isAtBottomRef.current && idleMs > 500) {
+        scrollToBottom();
+      } else {
+        setShowNewMessageNotice(true);
+      }
     };
 
     const handleMessageSent = (sentMessage: Message) => {
@@ -154,7 +174,12 @@ function Chat() {
       // If this event represents a message I sent, we already handle via API response.
       if (sentMessage.sender._id === me) return;
       upsertMessage(sentMessage);
-      if (isAtBottomRef.current) scrollToBottom(); else setShowNewMessageNotice(true);
+      const idleMs = Date.now() - (lastUserScrollAtRef.current || 0);
+      if (isAtBottomRef.current && idleMs > 500) {
+        scrollToBottom();
+      } else {
+        setShowNewMessageNotice(true);
+      }
     };
 
     const handleTyping = (payload: { senderId: string; recipientId: string }) => {
@@ -171,10 +196,24 @@ function Chat() {
     socket.on('messageSent', handleMessageSent);
     socket.on('typing', handleTyping);
 
+    // Live updates: message edited
+    const handleEdited = (msg: Message) => {
+      setMessages(prev => prev.map(m => (m._id === msg._id ? { ...m, ...msg } : m)));
+    };
+    socket.on('messageEdited', handleEdited);
+
+    // Live updates: reactions
+    const handleReaction = (payload: { messageId: string; reactions: any[] }) => {
+      setMessages(prev => prev.map(m => (m._id === payload.messageId ? { ...m, reactions: payload.reactions as any } : m)));
+    };
+    socket.on('messageReaction', handleReaction);
+
     return () => {
       socket.off('newMessage', handleNewMessage);
       socket.off('messageSent', handleMessageSent);
       socket.off('typing', handleTyping);
+      socket.off('messageEdited', handleEdited);
+      socket.off('messageReaction', handleReaction);
       socket.disconnect();
       socketRef.current = null;
       if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
@@ -191,6 +230,13 @@ function Chat() {
         setChatUser(userProfile.user);
         const messagesResponse = await apiService.getMessages(userProfile.user._id);
         setMessages(messagesResponse.messages);
+        // One-time smooth scroll on entering chat after messages render
+        setTimeout(() => {
+          if (!didInitialScrollRef.current) {
+            scrollToBottom();
+            didInitialScrollRef.current = true;
+          }
+        }, 50);
       } catch (err) {
         console.error('Failed to fetch chat data:', err);
       } finally {
@@ -200,9 +246,6 @@ function Chat() {
     run();
   }, [username]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // Track scroll position to know if user is at bottom
   useEffect(() => {
@@ -211,6 +254,7 @@ function Chat() {
     const onScroll = () => {
       const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
       setIsAtBottom(nearBottom);
+      lastUserScrollAtRef.current = Date.now();
       if (nearBottom) setShowNewMessageNotice(false);
     };
     el.addEventListener('scroll', onScroll);
@@ -229,10 +273,23 @@ function Chat() {
   };
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !chatUser || !currentUser) return;
+    if (!chatUser || !currentUser) return;
+    const trimmed = message.trim();
+    if (!trimmed && !editingMessageId) return;
 
     try {
-      const messageContent = message.trim();
+      const messageContent = trimmed;
+
+      // Editing existing message
+      if (editingMessageId) {
+        const res = await apiService.editMessage(editingMessageId, messageContent);
+        const updated = res.message as Message;
+        setMessages(prev => prev.map(m => (m._id === updated._id ? { ...m, ...updated } : m)));
+        setEditingMessageId(null);
+        setMessage("");
+        return;
+      }
+
       setMessage("");
 
       // Optimistic message
@@ -255,13 +312,25 @@ function Chat() {
         messageType: "text",
         isRead: false,
         createdAt: new Date().toISOString(),
+        replyTo: replyToMessage
+          ? {
+              _id: replyToMessage._id,
+              content: replyToMessage.content,
+              sender: {
+                _id: replyToMessage.sender._id,
+                username: replyToMessage.sender.username,
+                fullName: replyToMessage.sender.fullName,
+                avatar: replyToMessage.sender.avatar,
+              },
+            }
+          : undefined,
         status: 'sending' as const,
       };
       setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
 
       // Send to server
-      const res = await apiService.sendMessage(chatUser._id, messageContent);
+      const res = await apiService.sendMessage(chatUser._id, messageContent, 'text', replyToMessage?._id);
       const confirmed = res.message as Message;
       setMessages((prev) => {
         const replaced = prev.map((m) => (m._id === tempId ? { ...confirmed, status: 'sent' } : m));
@@ -270,6 +339,7 @@ function Chat() {
         for (const m of replaced as Message[]) map.set(m._id, m);
         return Array.from(map.values()) as Message[];
       });
+      setReplyToMessage(null);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Mark last optimistic as failed
@@ -309,6 +379,47 @@ function Chat() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const truncate = (text: string, n = 80) => (text.length > n ? text.slice(0, n - 1) + '…' : text);
+
+  const groupedReactions = (msg: Message) => {
+    const map = new Map<string, number>();
+    (msg.reactions || []).forEach(r => map.set(r.emoji, (map.get(r.emoji) || 0) + 1));
+    return Array.from(map.entries());
+  };
+
+  const handleReact = async (msg: Message, emoji: string) => {
+    try {
+      await apiService.reactToMessage(msg._id, emoji);
+      // Optimistic-ish: toggle local while socket confirms
+      setMessages(prev => prev.map(m => {
+        if (m._id !== msg._id) return m;
+        const mineId = currentUser?._id;
+        const reactions = [...(m.reactions || [])];
+        const idx = reactions.findIndex(r => (r as any).user?.toString?.() === String(mineId));
+        if (idx !== -1) {
+          if (reactions[idx].emoji === emoji) reactions.splice(idx, 1); else reactions[idx].emoji = emoji;
+        } else {
+          reactions.push({ user: String(mineId), emoji, createdAt: new Date().toISOString() } as any);
+        }
+        return { ...m, reactions };
+      }));
+    } catch (e) {
+      console.error('Failed to react:', e);
+    }
+  };
+
+  const handleReply = (msg: Message) => {
+    setReplyToMessage(msg);
+    setSelectedMessageId(null);
+  };
+
+  const handleEditStart = (msg: Message) => {
+    if (msg.sender._id !== currentUser?._id) return;
+    setEditingMessageId(msg._id);
+    setMessage(msg.content);
+    setSelectedMessageId(null);
   };
 
   const formatLastSeen = (lastActive: string, isOnline: boolean) => {
@@ -429,7 +540,15 @@ function Chat() {
                       ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md"
                       : "bg-white text-gray-900 border border-gray-200 rounded-bl-md"
                   }`}
+                  onClick={() => setSelectedMessageId(prev => (prev === msg._id ? null : msg._id))}
                 >
+                  {/* Reply preview inside bubble */}
+                  {msg.replyTo && (
+                    <div className={`mb-2 text-xs rounded-xl px-3 py-2 ${msg.sender._id === currentUser?._id ? 'bg-white/15 text-white/90' : 'bg-gray-100 text-gray-700'}`}>
+                      <div className="font-semibold truncate">Replying to {msg.replyTo.sender.fullName.split(' ')[0]}</div>
+                      <div className="truncate">{truncate(msg.replyTo.content, 80)}</div>
+                    </div>
+                  )}
                   <p className="text-sm leading-relaxed">{msg.content}</p>
                   <div
                     className={`flex items-center justify-end mt-2 space-x-1 ${
@@ -437,6 +556,7 @@ function Chat() {
                     }`}
                   >
                     <span className="text-xs">{formatTime(msg.createdAt)}</span>
+                    {msg.edited && <span className="text-[10px] opacity-70 ml-1">(edited)</span>}
                     {msg.sender._id === currentUser?._id && (
                       msg.status === 'sending' ? (
                         <RotateCw className="w-3 h-3 animate-spin text-blue-200" />
@@ -454,6 +574,30 @@ function Chat() {
                       )
                     )}
                   </div>
+
+                  {/* Reactions summary */}
+                  {groupedReactions(msg).length > 0 && (
+                    <div className={`mt-2 flex flex-wrap gap-1 ${msg.sender._id === currentUser?._id ? 'justify-end' : 'justify-start'}`}>
+                      {groupedReactions(msg).map(([emoji, count]) => (
+                        <span key={emoji as string} className={`text-xs px-2 py-0.5 rounded-full ${msg.sender._id === currentUser?._id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>{emoji} {count}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Inline message actions */}
+                  {selectedMessageId === msg._id && (
+                    <div className={`mt-2 flex items-center gap-2 ${msg.sender._id === currentUser?._id ? 'justify-end' : 'justify-start'}`}>
+                      <button className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200" onClick={() => handleReply(msg)}>Reply</button>
+                      <div className="flex items-center gap-1">
+                        {['👍','❤️','😂','😮','😢'].map(em => (
+                          <button key={em} className="px-1" onClick={() => handleReact(msg, em)} aria-label={`React ${em}`}>{em}</button>
+                        ))}
+                      </div>
+                      {msg.sender._id === currentUser?._id && (
+                        <button className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200" onClick={() => handleEditStart(msg)}>Edit</button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -486,6 +630,20 @@ function Chat() {
 
       {/* Input Area */}
       <div className="bg-white border-t border-gray-200 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)]">
+        {/* Replying banner */}
+        {replyToMessage && (
+          <div className="px-4 pt-3">
+            <div className="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-xl p-2">
+              <div className="text-sm">
+                <div className="font-semibold text-gray-700">Replying to {replyToMessage.sender.fullName.split(' ')[0]}</div>
+                <div className="text-gray-500 truncate max-w-[70vw]">{truncate(replyToMessage.content, 100)}</div>
+              </div>
+              <button className="p-1 text-gray-500 hover:text-gray-700" onClick={() => setReplyToMessage(null)} aria-label="Cancel reply">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
         {/* New message notice when not at bottom */}
         {showNewMessageNotice && (
           <div className="absolute -top-10 left-1/2 -translate-x-1/2">
@@ -591,12 +749,12 @@ function Chat() {
             
             {/* Voice/Send Button */}
             <div className="flex-shrink-0">
-              {message.trim() ? (
+              {message.trim() || editingMessageId ? (
                 <button
                   onClick={handleSendMessage}
                   className="p-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  <Send className="w-5 h-5" />
+                  {editingMessageId ? <span className="text-sm font-semibold px-1">Save</span> : <Send className="w-5 h-5" />}
                 </button>
               ) : (
                 <button className="p-2.5 text-gray-500 hover:bg-gray-100 rounded-full transition-all duration-200">
