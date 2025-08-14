@@ -489,7 +489,7 @@ function Chat() {
 
   useEffect(() => {
     const textarea = document.querySelector('.chat-textarea');
-    if (textarea) {
+    if (textarea instanceof HTMLTextAreaElement) {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
     }
