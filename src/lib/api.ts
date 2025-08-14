@@ -286,15 +286,41 @@ class ApiService {
     return this.request<{ messages: any[] }>(`/messages/${userId}`, { method: "GET" });
   }
 
-  async sendMessage(recipientId: string, content: string, messageType: string = 'text'): Promise<{ message: any }> {
+  async sendMessage(recipientId: string, content: string, messageType: string = 'text', replyTo?: string): Promise<{ message: any }> {
+    const payload: any = { recipientId, content, messageType };
+    if (replyTo) payload.replyTo = replyTo;
     return this.request<{ message: any }>("/messages", {
       method: "POST",
-      body: JSON.stringify({ recipientId, content, messageType }),
+      body: JSON.stringify(payload),
     });
   }
 
   async markAsRead(messageId: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/messages/${messageId}/read`, { method: "PUT" });
+  }
+
+  // Edit a message
+  async editMessage(messageId: string, content: string): Promise<{ message: any }> {
+    return this.request<{ message: any }>(`/messages/${messageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  // React to a message (toggle). Pass emoji like "👍" or ":heart:"
+  async reactToMessage(messageId: string, emoji: string): Promise<{ messageId: string; reactions: any[] }> {
+    return this.request<{ messageId: string; reactions: any[] }>(`/messages/${messageId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
+    });
+  }
+
+  // Remove reaction (optionally pass emoji to remove only that emoji)
+  async removeReaction(messageId: string, emoji?: string): Promise<{ messageId: string; reactions: any[] }> {
+    return this.request<{ messageId: string; reactions: any[] }>(`/messages/${messageId}/reactions`, {
+      method: 'DELETE',
+      body: JSON.stringify({ emoji }),
+    });
   }
 
   async getMutualFollowers(): Promise<{ mutualFollowers: User[] }> {
