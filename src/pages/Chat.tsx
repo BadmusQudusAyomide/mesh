@@ -79,6 +79,8 @@ function Chat() {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isLoadingOlder, setIsLoadingOlder] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
@@ -92,6 +94,7 @@ function Chat() {
   // Keep latest IDs to avoid effect re-binding
   const chatUserIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
+  const PAGE_SIZE = 40;
 
   // Upsert helper to avoid duplicates
   const upsertMessage = (incoming: Message) => {
@@ -220,7 +223,7 @@ function Chat() {
     };
   }, [currentUser]);
 
-  // Fetch chat user and initial messages when username changes
+  // Fetch chat user and initial page of messages when username changes
   useEffect(() => {
     const run = async () => {
       if (!username) return;
@@ -228,8 +231,9 @@ function Chat() {
         setIsLoading(true);
         const userProfile = await apiService.getUserProfile(username);
         setChatUser(userProfile.user);
-        const messagesResponse = await apiService.getMessages(userProfile.user._id);
+        const messagesResponse = await apiService.getMessages(userProfile.user._id, { limit: PAGE_SIZE });
         setMessages(messagesResponse.messages);
+        setHasMore(!!messagesResponse.hasMore);
         // One-time smooth scroll on entering chat after messages render
         setTimeout(() => {
           if (!didInitialScrollRef.current) {
@@ -247,7 +251,7 @@ function Chat() {
   }, [username]);
 
 
-  // Track scroll position to know if user is at bottom
+  // Track scroll position to know if user is at bottom and trigger loading older messages
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -256,6 +260,10 @@ function Chat() {
       setIsAtBottom(nearBottom);
       lastUserScrollAtRef.current = Date.now();
       if (nearBottom) setShowNewMessageNotice(false);
+      const nearTop = el.scrollTop < 60;
+      if (nearTop && hasMore && !isLoadingOlder) {
+        void loadOlderMessages();
+      }
     };
     el.addEventListener('scroll', onScroll);
     // Init state
@@ -270,6 +278,33 @@ function Chat() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const loadOlderMessages = async () => {
+    if (!chatUser || messages.length === 0) return;
+    setIsLoadingOlder(true);
+    const el = messagesContainerRef.current;
+    const prevScrollHeight = el?.scrollHeight || 0;
+    const prevScrollTop = el?.scrollTop || 0;
+    const oldest = messages[0];
+    try {
+      const res = await apiService.getMessages(chatUser._id, { before: oldest.createdAt, limit: PAGE_SIZE });
+      const older = res.messages as Message[];
+      setHasMore(!!res.hasMore);
+      if (older.length > 0) {
+        setMessages(prev => [...older, ...prev]);
+        // Preserve viewport position after DOM updates
+        setTimeout(() => {
+          if (!el) return;
+          const newScrollHeight = el.scrollHeight;
+          el.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
+        }, 0);
+      }
+    } catch (e) {
+      console.error('Failed to load older messages:', e);
+    } finally {
+      setIsLoadingOlder(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -376,9 +411,22 @@ function Chat() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showAttachments]);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const formatDateHeader = (dateString: string) => {
+    const d = new Date(dateString);
+    return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+  const formatSmartTime = (dateString: string) => {
+    const d = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const min = 60 * 1000;
+    const hr = 60 * min;
+    const day = 24 * hr;
+    if (diff < 5 * min) return 'Just now';
+    if (diff < hr) return `${Math.floor(diff / min)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hr)}h ago`;
+    return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const truncate = (text: string, n = 80) => (text.length > n ? text.slice(0, n - 1) + '…' : text);
@@ -519,12 +567,23 @@ function Chat() {
             <p className="text-gray-500 max-w-sm">Send a message to {chatUser.fullName} to begin your chat.</p>
           </div>
         ) : (
-          messages.map((msg) => (
+          messages.map((msg, idx) => {
+            const prev = idx > 0 ? messages[idx - 1] : null;
+            const showDateHeader = !prev || !isSameDay(new Date(prev.createdAt), new Date(msg.createdAt));
+            return (
             <div
               key={msg._id}
               className={`flex ${msg.sender._id === currentUser?._id ? "justify-end" : "justify-start"}`}
             >
-              <div className="flex items-end space-x-2 max-w-xs lg:max-w-md">
+              <div className="flex items-end space-x-2 max-w-xs lg:max-w-md w-full">
+                {/* Date separator */}
+                {showDateHeader && (
+                  <div className="w-full flex justify-center mb-2">
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                      {formatDateHeader(msg.createdAt)}
+                    </span>
+                  </div>
+                )}
                 {msg.sender._id !== currentUser?._id && (
                   <Link to={`/profile/${msg.sender.username}`} className="flex-shrink-0" aria-label={`View ${msg.sender.fullName}'s profile`}>
                     <img
@@ -555,7 +614,7 @@ function Chat() {
                       msg.sender._id === currentUser?._id ? "text-blue-100" : "text-gray-500"
                     }`}
                   >
-                    <span className="text-xs">{formatTime(msg.createdAt)}</span>
+                    <span className="text-xs">{formatSmartTime(msg.createdAt)}</span>
                     {msg.edited && <span className="text-[10px] opacity-70 ml-1">(edited)</span>}
                     {msg.sender._id === currentUser?._id && (
                       msg.status === 'sending' ? (
@@ -601,7 +660,7 @@ function Chat() {
                 </div>
               </div>
             </div>
-          ))
+          );})
         )}
 
         {/* Typing Indicator */}
