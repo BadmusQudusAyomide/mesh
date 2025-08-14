@@ -90,6 +90,8 @@ function Chat() {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string } | null>(null);
+  const [mobileActionSheet, setMobileActionSheet] = useState<{ messageId: string } | null>(null);
+  const [showTopMenu, setShowTopMenu] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -592,8 +594,8 @@ function Chat() {
   const handleMessageLongPress = (msgId: string, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if ('touches' in e) {
-      // Mobile long press - start selection
-      handleMessageSelect(msgId);
+      // Mobile long press - open action sheet
+      setMobileActionSheet({ messageId: msgId });
     } else {
       // Desktop right click - show context menu
       setContextMenu({
@@ -720,11 +722,46 @@ function Chat() {
           <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
             <Video className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
+          <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group" onClick={() => setShowTopMenu(v => !v)}>
             <MoreVertical className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
         </div>
       </div >
+
+      {/* Top Menu (WhatsApp-like) */}
+      {showTopMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowTopMenu(false)} />
+          <div className="fixed right-4 top-16 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 min-w-[200px]">
+            <button
+              onClick={() => { setShowSearch(true); setShowTopMenu(false); }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700"
+            >
+              Search
+            </button>
+            <button
+              onClick={() => { navigate(`/profile/${chatUser.username}`); setShowTopMenu(false); }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700"
+            >
+              View profile
+            </button>
+            <button
+              onClick={() => setShowTopMenu(false)}
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-400 cursor-not-allowed"
+              disabled
+            >
+              Mute notifications
+            </button>
+            <button
+              onClick={() => setShowTopMenu(false)}
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-400 cursor-not-allowed"
+              disabled
+            >
+              Block
+            </button>
+          </div>
+        </>
+      )}
 
         {/* Search Bar */ }
       { showSearch && (
@@ -788,6 +825,54 @@ function Chat() {
         </div>
       )
     }
+
+    {/* Mobile Action Sheet for message (long press) */}
+    {mobileActionSheet && (
+      <>
+        <div className="fixed inset-0 z-40" onClick={() => setMobileActionSheet(null)} />
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 p-4">
+          {(() => {
+            const msg = messages.find(m => m._id === mobileActionSheet.messageId);
+            if (!msg) return null;
+            const isOwn = msg.sender._id === currentUser?._id;
+            return (
+              <div className="space-y-3">
+                {/* Quick reactions */}
+                <div className="flex items-center justify-center gap-2">
+                  {['👍','❤️','😂','😮','😢','😡'].map(em => (
+                    <button
+                      key={em}
+                      onClick={() => { handleReact(msg, em); setMobileActionSheet(null); }}
+                      className="px-3 py-2 text-xl hover:bg-gray-100 rounded-xl"
+                    >{em}</button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { handleReply(msg); setMobileActionSheet(null); }}
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
+                  >Reply</button>
+                  <button
+                    onClick={() => { handleCopyMessage(msg); setMobileActionSheet(null); }}
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
+                  >Copy</button>
+                  <button
+                    onClick={() => { setShowEmojiPicker(msg._id); setMobileActionSheet(null); }}
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
+                  >React</button>
+                  {isOwn && (
+                    <button
+                      onClick={() => { handleEditStart(msg); setMobileActionSheet(null); }}
+                      className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
+                    >Edit</button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </>
+    )}
 
     {/* Messages */ }
     <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1 pb-28 scroll-smooth">
@@ -1167,7 +1252,7 @@ function Chat() {
                   onFocus={() => setIsInputFocused(true)}
                   onBlur={() => setIsInputFocused(false)}
                   onKeyDown={handleKeyPress}
-                  placeholder={`Message ${(chatUser.fullName || chatUser.username).split(' ')[0]}...`}
+                  placeholder={`Message ${truncate((chatUser.fullName || chatUser.username).split(' ')[0], 16)}`}
                   className="w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-32 leading-relaxed"
                   rows={1}
                   style={{
