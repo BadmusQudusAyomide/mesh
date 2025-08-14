@@ -255,7 +255,15 @@ function Inbox() {
   };
 
   // Truncate helper to keep preview short and avoid layout shift
-  const truncatePreview = (text: string, max = 60) => {
+  const getPreviewMax = () => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    if (w < 360) return 28;
+    if (w < 420) return 34;
+    if (w < 640) return 42; // base phones
+    if (w < 768) return 54; // small tablets
+    return 60; // desktop
+  };
+  const truncatePreview = (text: string, max = getPreviewMax()) => {
     if (!text) return "";
     const clean = String(text).replace(/\n/g, " ").trim();
     return clean.length > max ? clean.slice(0, max - 1) + "…" : clean;
@@ -479,7 +487,7 @@ function Inbox() {
                             </div>
                             {conversation.lastMessage && (
                               <div className="flex items-center justify-between">
-                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0">
+                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-[60vw] sm:max-w-[40vw]">
                                   {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
                                   {truncatePreview(conversation.lastMessage.content)}
                                 </p>

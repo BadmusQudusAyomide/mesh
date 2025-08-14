@@ -282,8 +282,13 @@ class ApiService {
     }>(`/messages/conversations?page=${page}&limit=${limit}`, { method: "GET" });
   }
 
-  async getMessages(userId: string): Promise<{ messages: any[] }> {
-    return this.request<{ messages: any[] }>(`/messages/${userId}`, { method: "GET" });
+  async getMessages(userId: string, opts?: { before?: string | number | Date; limit?: number }): Promise<{ messages: any[]; hasMore?: boolean }> {
+    const params = new URLSearchParams();
+    if (opts?.before) params.set('before', String(opts.before instanceof Date ? opts.before.getTime() : opts.before));
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    const qs = params.toString();
+    const url = qs ? `/messages/${userId}?${qs}` : `/messages/${userId}`;
+    return this.request<{ messages: any[]; hasMore?: boolean }>(url, { method: "GET" });
   }
 
   async sendMessage(recipientId: string, content: string, messageType: string = 'text', replyTo?: string): Promise<{ message: any }> {
