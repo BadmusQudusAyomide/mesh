@@ -26,7 +26,6 @@ import {
   Edit3,
   Trash2,
   ChevronDown,
-  Wifi,
   WifiOff,
 } from "lucide-react";
 
@@ -81,7 +80,6 @@ function Chat() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAttachments, setShowAttachments] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -560,14 +558,12 @@ function Chat() {
 
   const handleReply = (msg: Message) => {
     setReplyToMessage(msg);
-    setSelectedMessageId(null);
   };
 
   const handleEditStart = (msg: Message) => {
     if (msg.sender._id !== currentUser?._id) return;
     setEditingMessageId(msg._id);
     setMessage(msg.content);
-    setSelectedMessageId(null);
   };
 
   const handleCopyMessage = (msg: Message) => {
@@ -600,7 +596,6 @@ function Chat() {
       handleMessageSelect(msgId);
     } else {
       // Desktop right click - show context menu
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setContextMenu({
         x: (e as React.MouseEvent).clientX,
         y: (e as React.MouseEvent).clientY,
@@ -837,7 +832,7 @@ function Chat() {
                 )}
 
                 <div className="flex flex-col space-y-1">
-                  {item.messages.map((msg, msgIndex) => (
+                  {item.messages.map((msg: Message, msgIndex: number) => (
                     <div
                       key={msg._id}
                       className={`group/message relative ${selectedMessages.has(msg._id) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
