@@ -488,7 +488,7 @@ function Chat() {
   };
 
   useEffect(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('.chat-textarea');
     if (textarea) {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
@@ -661,7 +661,7 @@ function Chat() {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gray-50">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
         <div className="flex items-center space-x-4 min-w-0 flex-1">
@@ -710,12 +710,6 @@ function Chat() {
         </div >
 
         <div className="flex items-center space-x-1">
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
-          >
-            <Search className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
-          </button>
           <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
             <Phone className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
@@ -875,7 +869,7 @@ function Chat() {
     )}
 
     {/* Messages */ }
-    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1 pb-28 scroll-smooth">
+    <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'}`}>
       {messagesWithDates.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center animate-in fade-in duration-500">
           <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6 shadow-lg">
@@ -901,22 +895,10 @@ function Chat() {
               key={item.id}
               className={`flex ${item.isOwn ? "justify-end" : "justify-start"} group animate-in slide-in-from-${item.isOwn ? 'right' : 'left'} duration-300`}
             >
-              <div className="flex items-end space-x-3 max-w-xs lg:max-w-md">
-                {!item.isOwn && (
-                  <Link
-                    to={`/profile/${item.sender.username}`}
-                    className="flex-shrink-0 mb-1 opacity-100 group-hover:opacity-90 transition-opacity"
-                    aria-label={`View ${item.sender.fullName}'s profile`}
-                  >
-                    <img
-                      src={item.sender.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.sender.username}`}
-                      alt={item.sender.fullName}
-                      className="w-8 h-8 rounded-full object-cover shadow-md"
-                    />
-                  </Link>
-                )}
+              <div className="flex items-end space-x-3 max-w-[90%] sm:max-w-[80%] lg:max-w-[70%]">
+                {/* Avatar removed for incoming messages per request */}
 
-                <div className="flex flex-col space-y-1">
+                <div className="flex flex-col space-y-2">
                   {item.messages.map((msg: Message, msgIndex: number) => (
                     <div
                       key={msg._id}
@@ -934,7 +916,7 @@ function Chat() {
                       onClick={() => selectionMode && handleMessageSelect(msg._id)}
                     >
                       <div
-                        className={`px-4 py-3 shadow-md transition-all duration-200 ${item.isOwn
+                        className={`px-3 py-2 shadow-md transition-all duration-200 ${item.isOwn
                             ? `bg-gradient-to-r from-blue-500 to-purple-600 text-white ${msgIndex === 0 ? 'rounded-2xl rounded-br-md' :
                               msgIndex === item.messages.length - 1 ? 'rounded-2xl rounded-tr-md' :
                                 'rounded-l-2xl rounded-r-md'
@@ -947,21 +929,20 @@ function Chat() {
                       >
                         {/* Reply preview */}
                         {msg.replyTo && (
-                          <div className={`mb-3 text-xs rounded-xl px-3 py-2 border-l-4 ${item.isOwn
-                              ? 'bg-white/15 text-white/90 border-white/30'
+                          <div className={`mb-2 text-xs rounded-lg px-2 py-1 border-l-2 max-h-12 overflow-hidden ${item.isOwn
+                              ? 'bg-white/10 text-white/90 border-white/40'
                               : 'bg-gray-50 text-gray-700 border-gray-300'
                             }`}>
                             <div className="font-semibold truncate mb-1">
                               {msg.replyTo.sender._id === currentUser?._id ? 'You' : msg.replyTo.sender.fullName.split(' ')[0]}
                             </div>
-                            <div className="truncate opacity-75">{truncate(msg.replyTo.content, 60)}</div>
+                            <div className="truncate opacity-75">{truncate(msg.replyTo.content, 50)}</div>
                           </div>
                         )}
 
-                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{msg.content}</p>
 
-                        <div className={`flex items-center justify-between mt-2 ${item.isOwn ? "text-blue-100" : "text-gray-500"
-                          }`}>
+                        <div className={`flex items-center justify-between mt-2 text-gray-500`}>
                           <div className="flex items-center space-x-2">
                             <span className="text-xs">{formatTime(msg.createdAt)}</span>
                             {msg.edited && (
@@ -975,12 +956,12 @@ function Chat() {
                             <div className="flex items-center">
                               {msg.status === 'sending' ? (
                                 <div className="flex items-center gap-1">
-                                  <RotateCw className="w-3 h-3 animate-spin text-blue-200" />
+                                  <RotateCw className="w-3 h-3 animate-spin text-gray-400" />
                                   <span className="text-xs">Sending</span>
                                 </div>
                               ) : msg.status === 'failed' ? (
                                 <button
-                                  className="flex items-center gap-1 text-red-200 hover:text-red-100 bg-red-500/20 px-2 py-1 rounded-full transition-colors"
+                                  className="flex items-center gap-1 text-red-600 hover:text-red-700 bg-red-50 px-2 py-1 rounded-full transition-colors"
                                   onClick={() => retrySend(msg._id, msg.content)}
                                   title="Tap to retry"
                                 >
@@ -988,7 +969,7 @@ function Chat() {
                                   <span className="text-xs">Retry</span>
                                 </button>
                               ) : (
-                                <CheckCheck className={`w-4 h-4 ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                                <CheckCheck className={`w-4 h-4 ${msg.isRead ? 'text-green-500' : 'text-gray-400'}`} />
                               )}
                             </div>
                           )}
@@ -1165,16 +1146,16 @@ function Chat() {
     <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)] shadow-lg">
       {/* Reply Banner */}
       {replyToMessage && (
-        <div className="px-6 pt-4 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-start justify-between bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-3">
-            <div className="text-sm flex-1 min-w-0">
-              <div className="font-semibold text-blue-900 mb-1">
+        <div className="px-3 sm:px-6 pt-2 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-start justify-between bg-blue-50 border-l-4 border-blue-400 rounded-lg p-2">
+            <div className="text-xs flex-1 min-w-0 max-h-12 overflow-y-auto">
+              <div className="font-semibold text-blue-900 mb-0.5">
                 Replying to {replyToMessage.sender._id === currentUser?._id ? 'yourself' : replyToMessage.sender.fullName.split(' ')[0]}
               </div>
-              <div className="text-blue-700 truncate">{truncate(replyToMessage.content, 100)}</div>
+              <div className="text-blue-700 truncate">{truncate(replyToMessage.content, 80)}</div>
             </div>
             <button
-              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full transition-all duration-200"
+              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full transition-all duration-200 ml-2 flex-shrink-0"
               onClick={() => setReplyToMessage(null)}
               aria-label="Cancel reply"
             >
@@ -1249,11 +1230,11 @@ function Chat() {
                 <textarea
                   value={message}
                   onChange={(e) => { setMessage(e.target.value); emitTyping(); }}
-                  onFocus={() => setIsInputFocused(true)}
+                  onFocus={() => { setIsInputFocused(true); messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
                   onBlur={() => setIsInputFocused(false)}
                   onKeyDown={handleKeyPress}
                   placeholder={`Message ${truncate((chatUser.fullName || chatUser.username).split(' ')[0], 16)}`}
-                  className="w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-32 leading-relaxed"
+                  className="chat-textarea w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-28 sm:max-h-36 leading-relaxed"
                   rows={1}
                   style={{
                     minHeight: '48px',
