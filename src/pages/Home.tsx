@@ -207,6 +207,9 @@ function Home() {
         )
       );
     });
+    socket.on("postDeleted", ({ postId }: { postId: string }) => {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    });
     return () => {
       socket.disconnect();
     };
@@ -364,6 +367,47 @@ function Home() {
         }
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Delete a post (owner only)
+  const handleDeletePost = async (postId: string) => {
+    // Optimistic remove
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      await apiService.deletePost(postId);
+    } catch (e) {
+      // Rollback on failure: ideally refetch; for now, show alert and refetch first page
+      alert("Failed to delete post");
+      try {
+        const res = await apiService.getPostsPaginated(1, 5);
+        const mapped = res.posts.map(
+          (post: BackendPost): FeedPost => ({
+            authorId: post.user?._id || '',
+            id: post._id,
+            user: post.user?.fullName || "Anonymous",
+            username: post.user?.username || "anonymous",
+            avatar: post.user?.avatar || "https://randomuser.me/api/portraits/men/1.jpg",
+            content: post.content,
+            time: new Date(post.createdAt).toLocaleString(),
+            image: post.image,
+            likes: post.likes.length,
+            comments: post.comments.length,
+            shares: 0,
+            views: 0,
+            isLiked: user ? post.likes.includes(user._id) : false,
+            isBookmarked: false,
+            isVerified: post.user?.isVerified || false,
+            engagement: 0,
+            trending: undefined,
+            category: undefined,
+            commentList: (post.comments as BackendComment[]).map(mapBackendCommentToFeedComment),
+          })
+        );
+        setPosts(mapped);
+        setHasMore(res.pagination?.hasMore ?? false);
+        setCurrentPage(1);
+      } catch {}
     }
   };
 
@@ -672,6 +716,7 @@ function Home() {
                   commentInputs={commentInputs}
                   setCommentInputs={setCommentInputs}
                   onFollow={handleFollow}
+                  onDelete={handleDeletePost}
                 />
               )}
               {loadingError && (

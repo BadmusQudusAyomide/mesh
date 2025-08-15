@@ -226,6 +226,11 @@ class ApiService {
     });
   }
 
+  // Delete a post (owner only)
+  async deletePost(postId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/posts/${postId}`, { method: 'DELETE' });
+  }
+
   // Get notifications for the current user
   async getNotifications(): Promise<{ notifications: Notification[] }> {
     return this.request<{ notifications: Notification[] }>("/posts/notifications", { method: "GET" });

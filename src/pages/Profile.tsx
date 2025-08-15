@@ -673,6 +673,20 @@ function Profile() {
   // Infinite scroll hook
   const { isFetching, setIsFetching } = useInfiniteScroll(loadMorePosts);
 
+  // Delete a post (owner only)
+  const handleDeletePost = async (postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      await apiService.deletePost(postId);
+    } catch (e) {
+      alert("Failed to delete post");
+      // No immediate rollback; user can refresh. Optionally re-fetch page 1
+      try {
+        if (username) await loadInitialPosts(username);
+      } catch {}
+    }
+  };
+
   // Stop fetching when done loading
   useEffect(() => {
     if (isFetching && !hasMore) {
@@ -735,6 +749,9 @@ function Profile() {
             : post
         )
       );
+    });
+    socket.on("postDeleted", ({ postId }: { postId: string }) => {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
     });
     return () => {
       socket.disconnect();
@@ -1200,6 +1217,7 @@ function Profile() {
                     commentInputs={commentInputs}
                     setCommentInputs={setCommentInputs}
                     onFollow={handleFollow} // Pass the generic follow handler
+                    onDelete={handleDeletePost}
                   />
                   
                   {/* Loading more posts */}

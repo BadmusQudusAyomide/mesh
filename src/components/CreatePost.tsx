@@ -9,6 +9,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import React, { useEffect, useMemo, useRef } from "react";
+import { useAuth } from "../contexts/AuthContextHelpers";
 
 interface CreatePostProps {
   postContent: string;
@@ -32,6 +33,9 @@ const CreatePost = ({
   setShowCreatePost,
 }: CreatePostProps) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { user } = useAuth();
+  const avatar = user?.avatar || "https://randomuser.me/api/portraits/men/1.jpg";
+  const displayName = user?.fullName || user?.username || "You";
 
   // Auto-resize textarea without causing layout thrash
   useEffect(() => {
@@ -61,8 +65,8 @@ const CreatePost = ({
         <div className="p-4 sm:p-6">
           <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-6">
             <img
-              src="https://randomuser.me/api/portraits/men/1.jpg"
-              alt="Profile"
+              src={avatar}
+              alt={displayName}
               width={48}
               height={48}
               loading="lazy"
@@ -70,7 +74,7 @@ const CreatePost = ({
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-white"
             />
             <div>
-              <h4 className="font-medium text-gray-800">Badmus</h4>
+              <h4 className="font-medium text-gray-800">{displayName}</h4>
               <div className="flex items-center space-x-2 mt-1">
                 <Globe className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600">Public</span>
