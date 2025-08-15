@@ -31,6 +31,8 @@ import {
   ChevronDown,
   WifiOff,
 } from "lucide-react";
+// Optional: add a stop icon for finishing recordings
+import { Square } from "lucide-react";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
@@ -88,6 +90,8 @@ interface Message {
   editedAt?: string;
   status?: 'sending' | 'failed' | 'sent';
   threadId?: string | null;
+  audioUrl?: string | null;
+  audioDuration?: number | null;
 }
 
 interface ChatUser {
@@ -139,6 +143,183 @@ function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
+
+  // Minimal socket listeners to append incoming messages immediately
+  useEffect(() => {
+    if (socketRef.current) return; // initialize once
+    const s = socketIOClient(SOCKET_URL, { transports: ['websocket'] });
+    socketRef.current = s;
+    const onNew = (msg: any) => {
+      // If the message is part of the current chat, append
+      if (!chatUser) return;
+      const isRelated = msg.sender?._id === chatUser._id || msg.recipient?._id === chatUser._id;
+      if (isRelated) {
+        setMessages((prev) => {
+          // If the real message arrives and we have a temp one, replace by thread/time heuristics
+          const exists = prev.some(p => p._id === msg._id);
+          if (exists) return prev; // de-dupe by _id
+          // attempt to replace the last temp audio if same sender and close timestamp
+          const last = prev[prev.length - 1];
+          if (last && last._id.startsWith('temp-') && last.messageType === 'audio' && last.sender._id === msg.sender?._id) {
+            const replaced = [...prev];
+            replaced[replaced.length - 1] = msg;
+            return replaced;
+          }
+          return [...prev, msg];
+        });
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 20);
+      }
+    };
+    s.on('newMessage', onNew);
+    s.on('messageSent', onNew);
+    return () => {
+      s.off('newMessage', onNew);
+      s.off('messageSent', onNew);
+      s.disconnect();
+      socketRef.current = null;
+    };
+  }, [chatUser?._id]);
+
+  // Voice note recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<BlobPart[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  const cancelRecordingRef = useRef(false);
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [recordTick, setRecordTick] = useState(0);
+  const currentTempVoiceIdRef = useRef<string | null>(null);
+  const currentTempVoiceUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isRecording) return;
+    const id = window.setInterval(() => setRecordTick((t) => t + 1), 500);
+    return () => window.clearInterval(id);
+  }, [isRecording]);
+
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = Math.floor(secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      recordedChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        try {
+          const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+          const duration = recordingStartedAt ? Math.round((Date.now() - recordingStartedAt) / 1000) : undefined;
+          if (!cancelRecordingRef.current && chatUser) {
+            setIsUploadingVoice(true);
+            setUploadProgress(0);
+            // Update previously created temp with the real blob URL so it becomes playable while uploading
+            const tempId = currentTempVoiceIdRef.current;
+            const localUrl = URL.createObjectURL(blob);
+            currentTempVoiceUrlRef.current = localUrl;
+            if (tempId) {
+              setMessages((prev) => prev.map(m => m._id === tempId ? { ...m, audioUrl: localUrl, audioDuration: duration ?? m.audioDuration } : m));
+            }
+
+            const res = await apiService.uploadVoiceNoteWithProgress(
+              chatUser._id,
+              blob,
+              {
+                duration,
+                replyTo: replyToMessage?._id,
+                onProgress: (p) => setUploadProgress(p),
+              }
+            );
+            // Replace temp message with real one
+            if (res?.message) {
+              setMessages((prev) => prev.map(m => m._id === tempId ? res.message : m));
+            }
+            // Background refetch: pull a few latest messages to ensure UI reflects instantly
+            try {
+              if (chatUser) {
+                const latest = await apiService.getMessages(chatUser._id, { limit: 10 });
+                if (latest?.messages?.length) {
+                  // Merge by _id de-dupe
+                  setMessages((prev) => {
+                    const map = new Map(prev.map(m => [m._id, m]));
+                    for (const m of latest.messages) map.set(m._id, m);
+                    return Array.from(map.values()).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                  });
+                }
+              }
+            } catch {}
+            if (localUrl) URL.revokeObjectURL(localUrl);
+            setReplyToMessage(null);
+          }
+        } catch (e) {
+          console.error('Voice upload failed', e);
+          const tempId = currentTempVoiceIdRef.current;
+          if (tempId) setMessages((prev) => prev.map(m => m._id === tempId ? { ...m, status: 'failed' as const } : m));
+        } finally {
+          setIsRecording(false);
+          setRecordingStartedAt(null);
+          cancelRecordingRef.current = false;
+          setIsUploadingVoice(false);
+          setUploadProgress(null);
+          stream.getTracks().forEach(t => t.stop());
+          currentTempVoiceIdRef.current = null;
+          currentTempVoiceUrlRef.current = null;
+        }
+      };
+      mediaRecorderRef.current = mr;
+      // Use a very small timeslice to flush chunks faster for near-instant stop
+      mr.start(50);
+      setIsRecording(true);
+      setRecordingStartedAt(Date.now());
+    } catch (e) {
+      console.error('Could not start recording', e);
+    }
+  };
+
+  const stopRecording = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== 'inactive') {
+      // Immediately update UI and flush any remaining data
+      setIsRecording(false);
+      // Create a temp placeholder message immediately so user sees it instantly
+      try {
+        const duration = recordingStartedAt ? Math.round((Date.now() - recordingStartedAt) / 1000) : undefined;
+        if (chatUser && currentUser) {
+          const tempId = `temp-${Date.now()}`;
+          currentTempVoiceIdRef.current = tempId;
+          const tempMsg: Message = {
+            _id: tempId,
+            sender: { _id: currentUser._id, username: currentUser.username, fullName: currentUser.fullName, avatar: currentUser.avatar },
+            recipient: { _id: chatUser._id, username: chatUser.username, fullName: chatUser.fullName, avatar: chatUser.avatar },
+            content: '',
+            messageType: 'audio',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            reactions: [],
+            status: 'sending',
+            threadId: replyToMessage?.threadId ?? null,
+            replyTo: replyToMessage ? { _id: replyToMessage._id, content: replyToMessage.content, sender: replyToMessage.sender } as any : null,
+            audioUrl: null,
+            audioDuration: duration ?? null,
+          };
+          setMessages((prev) => [...prev, tempMsg]);
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 10);
+        }
+      } catch {}
+      try { mr.requestData(); } catch {}
+      mr.stop();
+    }
+  };
+
+  const cancelRecording = () => {
+    cancelRecordingRef.current = true;
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== 'inactive') mr.stop();
+  };
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingEmitRef = useRef<number>(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -802,6 +983,16 @@ function Chat() {
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
           </div>
 
+      {/* Upload progress bar */}
+      {isUploadingVoice && typeof uploadProgress === 'number' && (
+        <div className="px-6 pb-2">
+          <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }} />
+          </div>
+          <div className="mt-1 text-xs text-gray-500">Uploading voice note… {uploadProgress}%</div>
+        </div>
+      )}
+
     {/* Thread Side Panel */}
     {threadOpen && (
       <div className="fixed inset-0 z-30">
@@ -1205,7 +1396,22 @@ function Chat() {
                           </div>
                         )}
 
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{renderHighlighted(msg.content, searchQuery)}</p>
+                        {msg.messageType === 'audio' && msg.audioUrl ? (
+                          <div className="flex items-center gap-2">
+                            <audio controls preload="none" src={msg.audioUrl} className="w-64 max-w-full" />
+                            {typeof msg.audioDuration === 'number' && (
+                              <span className={`text-xs ${item.isOwn ? 'text-white/80' : 'text-gray-500'}`}>{Math.max(1, Math.round(msg.audioDuration))}s</span>
+                            )}
+                            {msg.status === 'sending' && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>Sending…</span>
+                            )}
+                            {msg.status === 'failed' && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-red-500/20 text-white' : 'bg-red-100 text-red-700'}`}>Failed</span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{renderHighlighted(msg.content, searchQuery)}</p>
+                        )}
 
                         <div className={`flex items-center justify-between mt-2 text-gray-500`}>
                           <div className="flex items-center space-x-2">
@@ -1534,8 +1740,21 @@ function Chat() {
             )}
           </div>
 
-          {/* Send/Voice Button */}
-          <div className="flex-shrink-0">
+          {/* Send / Voice Area (WhatsApp-style) */}
+          <div className="flex-shrink-0 flex items-center gap-2">
+            {/* Recording pill */}
+            {isRecording && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-sm">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="tabular-nums">
+                  {formatDuration(((Date.now() - (recordingStartedAt || Date.now())) / 1000))}
+                </span>
+                <button onClick={cancelRecording} className="text-red-600 hover:text-red-800" title="Cancel">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {message.trim() || editingMessageId ? (
               <button
                 onClick={handleSendMessage}
@@ -1549,8 +1768,16 @@ function Chat() {
                 )}
               </button>
             ) : (
-              <button className="p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-full transition-all duration-200 hover:scale-110">
-                <Mic className="w-5 h-5" />
+              <button
+                onClick={() => (isRecording ? stopRecording() : startRecording())}
+                className={`p-3 rounded-full transition-all duration-200 ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 hover:scale-110'}`}
+                title={isRecording ? 'Stop recording' : 'Record voice note'}
+              >
+                {isRecording ? (
+                  <Square className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
               </button>
             )}
           </div>
