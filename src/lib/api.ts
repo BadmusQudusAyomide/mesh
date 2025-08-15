@@ -282,13 +282,32 @@ class ApiService {
     }>(`/messages/conversations?page=${page}&limit=${limit}`, { method: "GET" });
   }
 
-  async getMessages(userId: string, opts?: { before?: string | number | Date; limit?: number }): Promise<{ messages: any[]; hasMore?: boolean }> {
+  async getMessages(
+    userId: string,
+    opts?: { before?: string | number | Date; limit?: number; q?: string; start?: string | number | Date; end?: string | number | Date }
+  ): Promise<{ messages: any[]; hasMore?: boolean }> {
+    const params = new URLSearchParams();
+    if (opts?.before) params.set('before', String(opts.before instanceof Date ? opts.before.getTime() : opts.before));
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.q) params.set('q', opts.q);
+    if (opts?.start) params.set('start', String(opts.start instanceof Date ? opts.start.getTime() : opts.start));
+    if (opts?.end) params.set('end', String(opts.end instanceof Date ? opts.end.getTime() : opts.end));
+    const qs = params.toString();
+    const url = qs ? `/messages/${userId}?${qs}` : `/messages/${userId}`;
+    return this.request<{ messages: any[]; hasMore?: boolean }>(url, { method: "GET" });
+  }
+
+  // Thread endpoints
+  async getThreadMessages(
+    threadId: string,
+    opts?: { before?: string | number | Date; limit?: number }
+  ): Promise<{ messages: any[]; hasMore?: boolean }> {
     const params = new URLSearchParams();
     if (opts?.before) params.set('before', String(opts.before instanceof Date ? opts.before.getTime() : opts.before));
     if (opts?.limit) params.set('limit', String(opts.limit));
     const qs = params.toString();
-    const url = qs ? `/messages/${userId}?${qs}` : `/messages/${userId}`;
-    return this.request<{ messages: any[]; hasMore?: boolean }>(url, { method: "GET" });
+    const url = qs ? `/messages/thread/${threadId}?${qs}` : `/messages/thread/${threadId}`;
+    return this.request<{ messages: any[]; hasMore?: boolean }>(url, { method: 'GET' });
   }
 
   async sendMessage(recipientId: string, content: string, messageType: string = 'text', replyTo?: string): Promise<{ message: any }> {
