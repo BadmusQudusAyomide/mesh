@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
 import socketIOClient from "socket.io-client";
+// Add message virtualization for large conversations
+// Virtualize search results list to keep main view unchanged and avoid complex variable heights
+import { FixedSizeList as List } from 'react-window';
 import {
   ArrowLeft,
   Send,
@@ -31,6 +34,32 @@ import {
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
+// Highlight helper for search results and inline messages
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const renderHighlighted = (text: string, query: string) => {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  try {
+    const regex = new RegExp(`(${escapeRegExp(q)})`, 'ig');
+    const parts = text.split(regex);
+    return (
+      <>
+        {parts.map((part, i) =>
+          regex.test(part) ? (
+            <mark key={i} className="bg-yellow-200 text-gray-900 px-0.5 rounded">
+              {part}
+            </mark>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+      </>
+    );
+  } catch {
+    return <>{text}</>;
+  }
+};
+
 interface Message {
   _id: string;
   sender: {
@@ -58,6 +87,7 @@ interface Message {
   edited?: boolean;
   editedAt?: string;
   status?: 'sending' | 'failed' | 'sent';
+  threadId?: string | null;
 }
 
 interface ChatUser {
@@ -84,6 +114,12 @@ function Chat() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  // Date range filters for search
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  // Implement message pagination (state only; fetchMore placeholder)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -92,6 +128,13 @@ function Chat() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string } | null>(null);
   const [mobileActionSheet, setMobileActionSheet] = useState<{ messageId: string } | null>(null);
   const [showTopMenu, setShowTopMenu] = useState(false);
+
+  // Threading state
+  const [threadOpen, setThreadOpen] = useState(false);
+  const [threadRoot, setThreadRoot] = useState<Message | null>(null);
+  const [threadMessages, setThreadMessages] = useState<Message[]>([]);
+  const [threadHasMore, setThreadHasMore] = useState<boolean>(false);
+  const [threadLoading, setThreadLoading] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -105,6 +148,8 @@ function Chat() {
   const lastUserScrollAtRef = useRef<number>(0);
   const chatUserIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
+  const messageNodeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const PAGE_SIZE = 30;
 
   // Monitor online status
   useEffect(() => {
@@ -192,12 +237,27 @@ function Chat() {
     }
   }, [chatUser, editingMessageId]);
 
-  // Filter messages based on search
-  const filteredMessages = messages.filter(msg => 
-    !searchQuery || 
-    msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    msg.sender.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter messages based on search and date range
+  const filteredMessages = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const hasQ = q.length > 0;
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    if (end) {
+      // Include entire end day
+      end.setHours(23, 59, 59, 999);
+    }
+    return messages.filter(msg => {
+      const created = new Date(msg.createdAt);
+      if (start && created < start) return false;
+      if (end && created > end) return false;
+      if (!hasQ) return true;
+      return (
+        msg.content.toLowerCase().includes(q) ||
+        msg.sender.fullName.toLowerCase().includes(q)
+      );
+    });
+  }, [messages, searchQuery, startDate, endDate]);
 
   // Group messages by sender and time
   const groupedMessages = filteredMessages.reduce((groups: Array<{messages: Message[], sender: Message['sender'], isOwn: boolean}>, msg, index) => {
@@ -300,6 +360,16 @@ function Chat() {
       );
       if (!ok) return;
       upsertMessage(newMessage);
+      // If a thread panel is open, update it when message belongs to current thread
+      if (threadOpen && threadRoot) {
+        const activeThreadId = threadRoot.threadId || threadRoot._id;
+        if ((newMessage.threadId || newMessage._id) === activeThreadId) {
+          setThreadMessages(prev => {
+            const exists = prev.some(m => m._id === newMessage._id);
+            return exists ? prev.map(m => (m._id === newMessage._id ? newMessage : m)) : [...prev, newMessage];
+          });
+        }
+      }
       const idleMs = Date.now() - (lastUserScrollAtRef.current || 0);
       if (isAtBottomRef.current && idleMs > 500) {
         scrollToBottom();
@@ -318,6 +388,15 @@ function Chat() {
       if (!ok) return;
       if (sentMessage.sender._id === me) return;
       upsertMessage(sentMessage);
+      if (threadOpen && threadRoot) {
+        const activeThreadId = threadRoot.threadId || threadRoot._id;
+        if ((sentMessage.threadId || sentMessage._id) === activeThreadId) {
+          setThreadMessages(prev => {
+            const exists = prev.some(m => m._id === sentMessage._id);
+            return exists ? prev.map(m => (m._id === sentMessage._id ? sentMessage : m)) : [...prev, sentMessage];
+          });
+        }
+      }
       const idleMs = Date.now() - (lastUserScrollAtRef.current || 0);
       if (isAtBottomRef.current && idleMs > 500) {
         scrollToBottom();
@@ -369,8 +448,9 @@ function Chat() {
         setIsLoading(true);
         const userProfile = await apiService.getUserProfile(username);
         setChatUser(userProfile.user);
-        const messagesResponse = await apiService.getMessages(userProfile.user._id);
-        setMessages(messagesResponse.messages);
+        const messagesResponse = await apiService.getMessages(userProfile.user._id, { limit: PAGE_SIZE });
+        setMessages(messagesResponse.messages as any);
+        setHasMoreMessages(!!messagesResponse.hasMore);
         setTimeout(() => {
           if (!didInitialScrollRef.current) {
             scrollToBottom();
@@ -394,11 +474,46 @@ function Chat() {
       setIsAtBottom(nearBottom);
       lastUserScrollAtRef.current = Date.now();
       if (nearBottom) setShowNewMessageNotice(false);
+      // Load older messages when near the top
+      if (el.scrollTop < 60 && !loadingMore && hasMoreMessages) {
+        void fetchMoreMessages();
+      }
     };
     el.addEventListener('scroll', onScroll);
     onScroll();
     return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [loadingMore, hasMoreMessages]);
+
+  // Safe placeholder for fetching more messages (no API assumptions)
+  const fetchMoreMessages = useCallback(async () => {
+    if (!chatUser || messages.length === 0) {
+      setHasMoreMessages(false);
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const oldest = messages[0];
+      const container = messagesContainerRef.current;
+      const prevScrollHeight = container ? container.scrollHeight : 0;
+      const res = await apiService.getMessages(chatUser._id, { before: oldest.createdAt, limit: PAGE_SIZE });
+      const older = res.messages as any[];
+      if (!older || older.length === 0) {
+        setHasMoreMessages(false);
+      } else {
+        setMessages(prev => [...older, ...prev]);
+        // Maintain scroll position after prepending
+        requestAnimationFrame(() => {
+          const newScrollHeight = container ? container.scrollHeight : 0;
+          if (container) container.scrollTop = newScrollHeight - prevScrollHeight;
+        });
+      }
+      setHasMoreMessages(!!res.hasMore);
+    } catch (e) {
+      console.error('Failed to load older messages', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [chatUser, messages]);
 
   useEffect(() => {
     isAtBottomRef.current = isAtBottom;
@@ -407,6 +522,14 @@ function Chat() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const scrollToMessage = useCallback((id: string) => {
+    const node = messageNodeRefs.current[id];
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setShowSearch(false);
+    }
+  }, []);
 
   const handleSendMessage = async () => {
     if (!chatUser || !currentUser) return;
@@ -562,6 +685,50 @@ function Chat() {
     setReplyToMessage(msg);
   };
 
+  const openThread = async (msg: Message) => {
+    const rootId = msg.threadId || msg._id;
+    setThreadRoot(msg);
+    setThreadOpen(true);
+    setThreadLoading(true);
+    try {
+      const res = await apiService.getThreadMessages(rootId, { limit: PAGE_SIZE });
+      setThreadMessages(res.messages as any);
+      setThreadHasMore(!!res.hasMore);
+    } catch (e) {
+      console.error('Failed to load thread', e);
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+  const closeThread = () => {
+    setThreadOpen(false);
+    setThreadRoot(null);
+    setThreadMessages([]);
+    setThreadHasMore(false);
+  };
+
+  const fetchMoreThreadMessages = async () => {
+    if (!threadRoot || threadMessages.length === 0) return;
+    const rootId = threadRoot.threadId || threadRoot._id;
+    setThreadLoading(true);
+    try {
+      const oldest = threadMessages[0];
+      const res = await apiService.getThreadMessages(rootId, { before: oldest.createdAt, limit: PAGE_SIZE });
+      const older = res.messages as any[];
+      if (!older || older.length === 0) {
+        setThreadHasMore(false);
+      } else {
+        setThreadMessages(prev => [...older, ...prev]);
+      }
+      setThreadHasMore(!!res.hasMore);
+    } catch (e) {
+      console.error('Failed to load older thread messages', e);
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
   const handleEditStart = (msg: Message) => {
     if (msg.sender._id !== currentUser?._id) return;
     setEditingMessageId(msg._id);
@@ -634,6 +801,49 @@ function Chat() {
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:0.1s]"></div>
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
           </div>
+
+    {/* Thread Side Panel */}
+    {threadOpen && (
+      <div className="fixed inset-0 z-30">
+        <div className="absolute inset-0 bg-black/30" onClick={closeThread} />
+        <div className="absolute right-0 top-0 h-full w-full sm:w-[28rem] bg-white shadow-2xl border-l border-gray-200 flex flex-col">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-sm text-gray-500">Thread</div>
+              <div className="font-semibold text-gray-900 truncate max-w-[70%]">{threadRoot?.content || 'Thread'}</div>
+            </div>
+            <button onClick={closeThread} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {threadLoading && threadMessages.length === 0 && (
+              <div className="text-sm text-gray-500">Loading thread…</div>
+            )}
+            {threadHasMore && (
+              <div className="flex justify-center">
+                <button onClick={fetchMoreThreadMessages} className="text-xs text-blue-600 hover:underline">Load older</button>
+              </div>
+            )}
+            {threadMessages.map((m) => (
+              <div key={m._id} className={`flex ${m.sender._id === currentUser?._id ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] px-3 py-2 rounded-2xl shadow ${m.sender._id === currentUser?._id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
+                  {m.replyTo && (
+                    <div className={`mb-2 text-xs rounded-lg px-2 py-1 border-l-2 ${m.sender._id === currentUser?._id ? 'bg-white/10 text-white/90 border-white/40' : 'bg-white text-gray-700 border-gray-300'}`}>
+                      <div className="font-semibold truncate mb-1">{m.replyTo.sender.fullName.split(' ')[0]}</div>
+                      <div className="truncate opacity-75">{m.replyTo.content}</div>
+                    </div>
+                  )}
+                  <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+                  <div className="mt-1 text-[11px] opacity-70">{formatTime(m.createdAt)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="p-3 border-t border-gray-200 text-xs text-gray-500">
+            Reply in the main composer to add to this thread.
+          </div>
+        </div>
+      </div>
+    )}
           <span className="text-gray-600 font-medium">Loading conversation...</span>
         </div>
       </div>
@@ -663,8 +873,8 @@ function Chat() {
   return (
     <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gray-50">
       {/* Header */}
-      <div className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
-        <div className="flex items-center space-x-4 min-w-0 flex-1">
+      <div className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
           <button 
             onClick={() => navigate('/inbox')}
             className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
@@ -672,11 +882,11 @@ function Chat() {
             <ArrowLeft className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
           
-          <Link to={`/profile/${chatUser.username}`} className="relative group" aria-label={`View ${chatUser.fullName}'s profile`}>
+          <Link to={`/profile/${chatUser.username}`} className="relative group flex-shrink-0" aria-label={`View ${chatUser.fullName}'s profile`}>
             <img
               src={chatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatUser.username}`}
               alt={chatUser.fullName}
-              className="w-12 h-12 rounded-full object-cover ring-3 ring-white shadow-lg group-hover:scale-105 transition-all duration-300"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ring-3 ring-white shadow-lg group-hover:scale-105 transition-all duration-300"
             />
           {
             chatUser.isOnline && (
@@ -687,16 +897,16 @@ function Chat() {
           }
           </Link>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <Link
             to={`/profile/${chatUser.username}`}
-            className="font-semibold text-gray-900 text-lg truncate max-w-[50vw] hover:underline transition-colors"
+            className="block font-semibold text-gray-900 text-base sm:text-lg truncate hover:underline transition-colors max-w-full"
             title={chatUser.fullName}
           >
-            {(chatUser.fullName || chatUser.username).split(' ')[0]}
+            {chatUser.fullName || chatUser.username}
           </Link>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-gray-500 truncate max-w-[50vw]">
+          <div className="mt-0.5 flex items-center gap-2 min-w-0">
+            <p className="hidden sm:block text-xs sm:text-sm text-gray-500 truncate">
               {formatLastSeen(chatUser.lastActive, chatUser.isOnline)}
             </p>
             {!isOnline && (
@@ -709,14 +919,14 @@ function Chat() {
         </div>
         </div >
 
-        <div className="flex items-center space-x-1">
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
+          <button className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
             <Phone className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
+          <button className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
             <Video className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
-          <button className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group" onClick={() => setShowTopMenu(v => !v)}>
+          <button className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group" onClick={() => setShowTopMenu(v => !v)}>
             <MoreVertical className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
         </div>
@@ -759,33 +969,81 @@ function Chat() {
 
         {/* Search Bar */ }
       { showSearch && (
-          <div className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-6 py-3 animate-in slide-in-from-top duration-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
-                autoFocus
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3 text-gray-500" />
-                </button>
-              )}
-            </div>
+        <div className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-6 py-3 animate-in slide-in-from-top duration-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              autoFocus
+            />
             {searchQuery && (
-              <div className="mt-2 text-xs text-gray-500">
-                {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'} found
-              </div>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X className="w-3 h-3 text-gray-500" />
+              </button>
             )}
           </div>
-        )}
+          {/* Date range filters */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="text-xs text-gray-500 sm:col-span-1">
+              {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'} found
+            </div>
+            <div className="sm:col-span-1">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-sm"
+                aria-label="Start date"
+              />
+            </div>
+            <div className="sm:col-span-1">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-sm"
+                aria-label="End date"
+              />
+            </div>
+          </div>
+
+          {/* Virtualized search results list */}
+          {(searchQuery || startDate || endDate) && filteredMessages.length > 0 && (
+            <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+              <List
+                height={240}
+                itemCount={filteredMessages.length}
+                itemSize={56}
+                width={'100%'}
+                itemData={{
+                  items: filteredMessages,
+                  onJump: (id: string) => scrollToMessage(id),
+                  query: searchQuery,
+                }}
+              >
+                {({ index, style, data }) => {
+                  const msg = data.items[index] as Message;
+                  return (
+                    <div style={style} className="px-3 py-2 bg-white hover:bg-gray-50 cursor-pointer" onClick={() => data.onJump(msg._id)}>
+                      <div className="text-xs text-gray-500 truncate">{new Date(msg.createdAt).toLocaleString()}</div>
+                      <div className="text-sm text-gray-900 truncate">
+                        {renderHighlighted(msg.content, data.query)}
+                      </div>
+                    </div>
+                  );
+                }}
+              </List>
+            </div>
+          )}
+        </div>
+      )}
 
     {/* Selection Mode Header */ }
     {
@@ -870,6 +1128,12 @@ function Chat() {
 
     {/* Messages */ }
     <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'}`}>
+      {/* Top loader for pagination */}
+      {loadingMore && (
+        <div className="flex justify-center items-center py-2 text-xs text-gray-500">
+          Loading older messages…
+        </div>
+      )}
       {messagesWithDates.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center animate-in fade-in duration-500">
           <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6 shadow-lg">
@@ -902,6 +1166,7 @@ function Chat() {
                   {item.messages.map((msg: Message, msgIndex: number) => (
                     <div
                       key={msg._id}
+                      ref={(el) => { messageNodeRefs.current[msg._id] = el; }}
                       className={`group/message relative ${selectedMessages.has(msg._id) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                         }`}
                       onMouseEnter={() => setHoveredMessageId(msg._id)}
@@ -940,7 +1205,7 @@ function Chat() {
                           </div>
                         )}
 
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{renderHighlighted(msg.content, searchQuery)}</p>
 
                         <div className={`flex items-center justify-between mt-2 text-gray-500`}>
                           <div className="flex items-center space-x-2">
@@ -1003,6 +1268,13 @@ function Chat() {
                             title="Reply"
                           >
                             <Reply className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => openThread(msg)}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            title="Open thread"
+                          >
+                            <span className="w-4 h-4 text-gray-600">#</span>
                           </button>
                           <button
                             onClick={() => setShowEmojiPicker(msg._id)}
