@@ -6,6 +6,7 @@ import socketIOClient from "socket.io-client";
 // Add message virtualization for large conversations
 // Virtualize search results list to keep main view unchanged and avoid complex variable heights
 import { FixedSizeList as List } from 'react-window';
+import type { ListChildComponentProps } from 'react-window';
 import {
   ArrowLeft,
   Send,
@@ -188,15 +189,19 @@ function Chat() {
   const cancelRecordingRef = useRef(false);
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [recordTick, setRecordTick] = useState(0);
+  const [recordElapsed, setRecordElapsed] = useState(0);
   const currentTempVoiceIdRef = useRef<string | null>(null);
   const currentTempVoiceUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isRecording) return;
-    const id = window.setInterval(() => setRecordTick((t) => t + 1), 500);
+    const id = window.setInterval(() => {
+      if (recordingStartedAt) {
+        setRecordElapsed(Math.max(0, Math.floor((Date.now() - recordingStartedAt) / 1000)));
+      }
+    }, 500);
     return () => window.clearInterval(id);
-  }, [isRecording]);
+  }, [isRecording, recordingStartedAt]);
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -1219,7 +1224,7 @@ function Chat() {
                   query: searchQuery,
                 }}
               >
-                {({ index, style, data }) => {
+                {({ index, style, data }: ListChildComponentProps<{ items: Message[]; onJump: (id: string) => void; query: string }>) => {
                   const msg = data.items[index] as Message;
                   return (
                     <div style={style} className="px-3 py-2 bg-white hover:bg-gray-50 cursor-pointer" onClick={() => data.onJump(msg._id)}>
@@ -1746,9 +1751,7 @@ function Chat() {
             {isRecording && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-sm">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="tabular-nums">
-                  {formatDuration(((Date.now() - (recordingStartedAt || Date.now())) / 1000))}
-                </span>
+                <span className="tabular-nums">{formatDuration(recordElapsed)}</span>
                 <button onClick={cancelRecording} className="text-red-600 hover:text-red-800" title="Cancel">
                   <X className="w-4 h-4" />
                 </button>
