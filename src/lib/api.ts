@@ -347,6 +347,66 @@ class ApiService {
     });
   }
 
+  // Upload a voice note
+  async uploadVoiceNote(
+    recipientId: string,
+    audioBlob: Blob,
+    opts?: { replyTo?: string; duration?: number }
+  ): Promise<{ message: any }> {
+    const form = new FormData();
+    form.append('audio', audioBlob, 'voice-note.webm');
+    form.append('recipientId', recipientId);
+    if (opts?.replyTo) form.append('replyTo', opts.replyTo);
+    if (typeof opts?.duration === 'number') form.append('duration', String(opts.duration));
+
+    const token = this.getToken();
+    const res = await fetch(`${API_BASE_URL}/messages/voice`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+    return handleResponse(res);
+  }
+
+  // Upload a voice note with progress via XHR
+  async uploadVoiceNoteWithProgress(
+    recipientId: string,
+    audioBlob: Blob,
+    opts: { replyTo?: string; duration?: number; onProgress?: (percent: number) => void } = {}
+  ): Promise<{ message: any }> {
+    const form = new FormData();
+    form.append('audio', audioBlob, 'voice-note.webm');
+    form.append('recipientId', recipientId);
+    if (opts?.replyTo) form.append('replyTo', opts.replyTo);
+    if (typeof opts?.duration === 'number') form.append('duration', String(opts.duration));
+
+    const token = this.getToken();
+
+    return new Promise<{ message: any }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE_URL}/messages/voice`);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && opts.onProgress) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          opts.onProgress(pct);
+        }
+      };
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+          else reject(new Error(data?.error || 'Upload failed'));
+        } catch (err) {
+          if (xhr.status >= 200 && xhr.status < 300) resolve({} as any);
+          else reject(new Error('Upload failed'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(form);
+    });
+  }
+
   async getMutualFollowers(): Promise<{ mutualFollowers: User[] }> {
     return this.request<{ mutualFollowers: User[] }>(`/messages/mutual-followers`);
   }
