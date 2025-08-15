@@ -61,6 +61,7 @@ interface PostProps {
   setCommentInput?: (val: string) => void;
   isFollowing?: boolean;
   onFollow?: (userId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
 const Post = ({
@@ -73,6 +74,7 @@ const Post = ({
   setCommentInput,
   isFollowing = false,
   onFollow,
+  onDelete,
 }: PostProps) => {
   // Remove mock comments state
   // const [comments, setComments] = useState([...]);
@@ -146,13 +148,20 @@ const Post = ({
       action: () => console.log("Edit post"),
       divider: true,
     },
-    {
-      icon: TrashIcon,
-      label: "Delete post",
-      action: () => console.log("Delete post"),
-      danger: true,
-    },
-  ], [isFollowing, onFollow, userId, post.authorId]);
+    // Show Delete only for owner
+    ...(userId === post.authorId && onDelete
+      ? [{
+          icon: TrashIcon,
+          label: "Delete post",
+          action: () => {
+            if (confirm("Delete this post? This action cannot be undone.")) {
+              onDelete(post.id);
+            }
+          },
+          danger: true,
+        }]
+      : []),
+  ], [isFollowing, onFollow, userId, post.authorId, onDelete, post.id]);
 
   // Add submit handler for comment
   const handleCommentSubmit = (e: React.FormEvent | React.KeyboardEvent) => {

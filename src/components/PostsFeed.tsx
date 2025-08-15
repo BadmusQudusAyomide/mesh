@@ -46,6 +46,7 @@ interface PostsFeedProps {
     React.SetStateAction<{ [postId: string]: string }>
   >;
   onFollow?: (userId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
 const PostsFeed = ({
@@ -57,6 +58,7 @@ const PostsFeed = ({
   commentInputs,
   setCommentInputs,
   onFollow,
+  onDelete,
 }: PostsFeedProps) => {
   const { user } = useAuth();
 
@@ -84,6 +86,7 @@ const PostsFeed = ({
           }
           isFollowing={followingSet.has(post.authorId?.toString() || '')}
           onFollow={onFollow}
+          onDelete={onDelete}
         />
       ))}
     </div>
