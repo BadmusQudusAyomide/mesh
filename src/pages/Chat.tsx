@@ -34,6 +34,8 @@ import {
 } from "lucide-react";
 // Optional: add a stop icon for finishing recordings
 import { Square } from "lucide-react";
+// Icons for custom audio player
+import { Play, Pause } from "lucide-react";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
@@ -93,6 +95,11 @@ interface Message {
   threadId?: string | null;
   audioUrl?: string | null;
   audioDuration?: number | null;
+  // Optional precomputed peaks for waveform rendering (normalized 0..1)
+  audioPeaks?: number[] | null;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  videoDuration?: number | null;
 }
 
 interface ChatUser {
@@ -144,6 +151,8 @@ function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const [viewer, setViewer] = useState<null | { url: string; type: 'image' | 'video' }>(null);
 
   // Minimal socket listeners to append incoming messages immediately
   useEffect(() => {
@@ -192,6 +201,11 @@ function Chat() {
   const [recordElapsed, setRecordElapsed] = useState(0);
   const currentTempVoiceIdRef = useRef<string | null>(null);
   const currentTempVoiceUrlRef = useRef<string | null>(null);
+  // Live recording visualizer
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const [recordPeaks, setRecordPeaks] = useState<number[]>(Array.from({ length: 20 }, () => 0));
 
   useEffect(() => {
     if (!isRecording) return;
@@ -208,6 +222,151 @@ function Chat() {
     const s = Math.floor(secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
+
+  // Lightweight, themed voice note player replacing the native audio UI
+  function VoiceNote({ src, duration, isOwn, peaks: initialPeaks }: { src: string; duration?: number | null; isOwn: boolean; peaks?: number[] | null }) {
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [current, setCurrent] = useState(0);
+    const [total, setTotal] = useState<number>(Math.max(0, Math.round(duration ?? 0))); // seconds
+    const [peaks, setPeaks] = useState<number[] | null>(initialPeaks ?? null);
+    const [isScrubbing, setIsScrubbing] = useState(false);
+
+    useEffect(() => {
+      setTotal(Math.max(0, Math.round(duration ?? 0)));
+    }, [duration]);
+
+    useEffect(() => {
+      const el = audioRef.current;
+      if (!el) return;
+      const onTime = () => {
+        setCurrent(el.currentTime);
+        if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration));
+      };
+      const onEnd = () => setIsPlaying(false);
+      el.addEventListener('timeupdate', onTime);
+      el.addEventListener('ended', onEnd);
+      return () => {
+        el.removeEventListener('timeupdate', onTime);
+        el.removeEventListener('ended', onEnd);
+      };
+    }, [audioRef.current]);
+
+    // Generate waveform peaks if not provided
+    useEffect(() => {
+      if (initialPeaks && initialPeaks.length) return; // already provided
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch(src, { mode: 'cors' as RequestMode });
+          const arr = await res.arrayBuffer();
+          const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+          const ctx: AudioContext = new AudioCtx();
+          const buffer = await ctx.decodeAudioData(arr.slice(0));
+          const ch = buffer.getChannelData(0);
+          const wantedBars = 60;
+          const samplesPerBar = Math.floor(ch.length / wantedBars);
+          const out: number[] = [];
+          for (let i = 0; i < wantedBars; i++) {
+            let sum = 0;
+            const start = i * samplesPerBar;
+            const end = Math.min(ch.length, start + samplesPerBar);
+            for (let j = start; j < end; j++) {
+              sum += ch[j] * ch[j];
+            }
+            const rms = Math.sqrt(sum / Math.max(1, end - start));
+            out.push(Math.min(1, rms * 2));
+          }
+          if (!cancelled) setPeaks(out);
+          try { ctx.close(); } catch {}
+        } catch {
+          // silently ignore and keep basic progress bar
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [src, initialPeaks]);
+
+    const toggle = () => {
+      const el = audioRef.current;
+      if (!el) return;
+      if (el.paused) {
+        el.play().then(() => setIsPlaying(true)).catch(() => {});
+      } else {
+        el.pause();
+        setIsPlaying(false);
+      }
+    };
+
+    const percent = total > 0 ? Math.min(100, (current / total) * 100) : 0;
+
+    // Scrub handler
+    const onScrub = (clientX: number, el: HTMLDivElement | null) => {
+      if (!el || !audioRef.current || total <= 0) return;
+      const rect = el.getBoundingClientRect();
+      const x = Math.min(Math.max(0, clientX - rect.left), rect.width);
+      const ratio = rect.width > 0 ? x / rect.width : 0;
+      audioRef.current.currentTime = ratio * total;
+      setCurrent(audioRef.current.currentTime);
+    };
+
+    return (
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggle}
+          className={`${isOwn ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-blue-600/10 text-blue-600 hover:bg-blue-600/15'} w-10 h-10 rounded-full flex items-center justify-center transition-colors`}
+          aria-label={isPlaying ? 'Pause voice note' : 'Play voice note'}
+        >
+          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+        </button>
+
+        <div className="flex-1 min-w-[200px] w-56 select-none">
+          {/* Waveform or fallback progress */}
+          <div
+            className={`relative group h-10 px-1 rounded-md ${isOwn ? 'bg-white/10' : 'bg-gray-100'}`}
+            onMouseDown={(e) => { setIsScrubbing(true); onScrub(e.clientX, e.currentTarget); }}
+            onMouseMove={(e) => { if (isScrubbing) onScrub(e.clientX, e.currentTarget); }}
+            onMouseUp={() => setIsScrubbing(false)}
+            onMouseLeave={() => setIsScrubbing(false)}
+            onTouchStart={(e) => { setIsScrubbing(true); onScrub(e.touches[0].clientX, e.currentTarget); }}
+            onTouchMove={(e) => { if (isScrubbing) onScrub(e.touches[0].clientX, e.currentTarget); }}
+            onTouchEnd={() => setIsScrubbing(false)}
+          >
+            {peaks && peaks.length ? (
+              <div className="flex items-end h-full gap-[2px]">
+                {peaks.map((p, i) => {
+                  // Determine if bar is within played percent
+                  const played = (i / peaks.length) * 100 <= percent;
+                  const h = Math.max(2, Math.round(p * 36));
+                  return (
+                    <div
+                      key={i}
+                      className={`${played ? (isOwn ? 'bg-white' : 'bg-blue-600') : (isOwn ? 'bg-white/40' : 'bg-blue-300/50')} w-[3px] rounded-t`}
+                      style={{ height: `${h}px` }}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={`h-1.5 mt-[18px] rounded-full overflow-hidden ${isOwn ? 'bg-white/20' : 'bg-gray-200'}`}>
+                <div
+                  className={`${isOwn ? 'bg-white' : 'bg-blue-600'} h-full transition-all`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <div className="mt-1 flex items-center justify-between text-[11px] opacity-80">
+            <span>{formatDuration(Math.floor(current))}</span>
+            <span>{formatDuration(Math.max(1, Math.floor(total)))}</span>
+          </div>
+        </div>
+
+        {/* Hidden audio element */}
+        <audio ref={audioRef} preload="metadata" src={src} />
+      </div>
+    );
+  }
 
   const startRecording = async () => {
     try {
@@ -280,6 +439,40 @@ function Chat() {
       mr.start(50);
       setIsRecording(true);
       setRecordingStartedAt(Date.now());
+      // Setup live waveform analyzer
+      try {
+        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        const ctx: AudioContext = new AudioCtx();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512; // balance perf/quality
+        analyserRef.current = analyser;
+        source.connect(analyser);
+        const buf = new Uint8Array(analyser.frequencyBinCount);
+        const bars = recordPeaks.length;
+        const loop = () => {
+          analyser.getByteTimeDomainData(buf);
+          // Compute RMS across equal windows for a bar-graph look
+          const windowSize = Math.floor(buf.length / bars);
+          const next: number[] = new Array(bars).fill(0);
+          for (let i = 0; i < bars; i++) {
+            let sum = 0;
+            const start = i * windowSize;
+            const end = Math.min(buf.length, start + windowSize);
+            for (let j = start; j < end; j++) {
+              const v = (buf[j] - 128) / 128; // -1..1
+              sum += v * v;
+            }
+            const rms = Math.sqrt(sum / Math.max(1, end - start));
+            // Smooth a bit and clamp
+            next[i] = Math.min(1, rms * 2);
+          }
+          setRecordPeaks(next);
+          rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
+      } catch {}
     } catch (e) {
       console.error('Could not start recording', e);
     }
@@ -318,12 +511,28 @@ function Chat() {
       try { mr.requestData(); } catch {}
       mr.stop();
     }
+    // Tear down analyser
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    try { analyserRef.current?.disconnect(); } catch {}
+    try { audioCtxRef.current?.close(); } catch {}
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    setRecordPeaks(Array.from({ length: 20 }, () => 0));
   };
 
   const cancelRecording = () => {
     cancelRecordingRef.current = true;
     const mr = mediaRecorderRef.current;
     if (mr && mr.state !== 'inactive') mr.stop();
+    // Clean up analyser if cancel
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    try { analyserRef.current?.disconnect(); } catch {}
+    try { audioCtxRef.current?.close(); } catch {}
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    setRecordPeaks(Array.from({ length: 20 }, () => 0));
   };
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingEmitRef = useRef<number>(0);
@@ -350,6 +559,71 @@ function Chat() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Media selection & upload (images/videos)
+  const handleOpenGallery = useCallback(() => {
+    mediaInputRef.current?.click();
+    setShowAttachments(false);
+  }, []);
+
+  const handleMediaSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!chatUser || !currentUser) return;
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const isVideo = /^video\//.test(file.type);
+      const isImage = /^image\//.test(file.type);
+      if (!isVideo && !isImage) return;
+
+      // Optimistic temp message
+      const tempId = `temp-${Date.now()}`;
+      const tempMsg: Message = {
+        _id: tempId,
+        sender: currentUser,
+        recipient: chatUser,
+        content: '',
+        messageType: isVideo ? 'video' : 'image',
+        isRead: true,
+        createdAt: new Date().toISOString(),
+        status: 'sending',
+        imageUrl: isImage ? URL.createObjectURL(file) : null,
+        videoUrl: isVideo ? URL.createObjectURL(file) : null,
+        videoDuration: null,
+      } as any;
+      setMessages(prev => [...prev, tempMsg]);
+      requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+
+      // Upload to server
+      const res = isVideo
+        ? await apiService.uploadVideoMessage(chatUser._id, file)
+        : await apiService.uploadImageMessage(chatUser._id, file);
+
+      const real = res.message as Message;
+      // Replace temp with real
+      setMessages(prev => prev.map(m => (m._id === tempId ? { ...real, status: 'sent' } as any : m)));
+    } catch (err) {
+      console.error('Failed to upload media', err);
+      // Flag last temp as failed
+      setMessages(prev => prev.map(m => (m.status === 'sending' && m._id.startsWith('temp-') ? { ...m, status: 'failed' } as any : m)));
+    } finally {
+      // reset input
+      if (e.target) e.target.value = '';
+    }
+  }, [chatUser, currentUser]);
+
+  const openViewer = useCallback((url: string, type: 'image' | 'video') => {
+    setViewer({ url, type });
+  }, []);
+  const closeViewer = useCallback(() => setViewer(null), []);
+  useEffect(() => {
+    if (!viewer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeViewer();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [viewer, closeViewer]);
 
   // Handle context menu
   useEffect(() => {
@@ -1401,12 +1675,52 @@ function Chat() {
                           </div>
                         )}
 
-                        {msg.messageType === 'audio' && msg.audioUrl ? (
-                          <div className="flex items-center gap-2">
-                            <audio controls preload="none" src={msg.audioUrl} className="w-64 max-w-full" />
-                            {typeof msg.audioDuration === 'number' && (
-                              <span className={`text-xs ${item.isOwn ? 'text-white/80' : 'text-gray-500'}`}>{Math.max(1, Math.round(msg.audioDuration))}s</span>
+                        {msg.messageType === 'image' && msg.imageUrl ? (
+                          <div className="relative">
+                            <button type="button" onClick={() => openViewer(msg.imageUrl!, 'image')} className="focus:outline-none">
+                              <img
+                                src={msg.imageUrl}
+                                alt="image message"
+                                loading="lazy"
+                                className="max-w-[240px] sm:max-w-[320px] rounded-lg object-cover"
+                              />
+                            </button>
+                            {msg.status === 'sending' && (
+                              <span className={`absolute bottom-2 right-2 text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-black/40 text-white' : 'bg-white/80 text-gray-700'}`}>Uploading…</span>
                             )}
+                            {msg.status === 'failed' && (
+                              <span className={`absolute bottom-2 right-2 text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-red-500/80 text-white' : 'bg-red-100 text-red-700'}`}>Failed</span>
+                            )}
+                          </div>
+                        ) : msg.messageType === 'video' && msg.videoUrl ? (
+                          <div className="relative">
+                            <div className="group">
+                              <video
+                                src={msg.videoUrl}
+                                controls
+                                preload="metadata"
+                                playsInline
+                                className="max-w-[260px] sm:max-w-[360px] rounded-lg bg-black cursor-pointer"
+                                onClick={(e) => {
+                                  // open viewer but prevent interfering with controls if clicking controls area
+                                  // If paused, allow opening in viewer on click overlay intent
+                                  if ((e.target as HTMLVideoElement).controls) {
+                                    // open only when not interacting with controls: use dblclick alternative? keep simple click
+                                    openViewer(msg.videoUrl!, 'video');
+                                  }
+                                }}
+                              />
+                            </div>
+                            {msg.status === 'sending' && (
+                              <span className={`absolute bottom-2 right-2 text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-black/40 text-white' : 'bg-white/80 text-gray-700'}`}>Uploading…</span>
+                            )}
+                            {msg.status === 'failed' && (
+                              <span className={`absolute bottom-2 right-2 text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-red-500/80 text-white' : 'bg-red-100 text-red-700'}`}>Failed</span>
+                            )}
+                          </div>
+                        ) : msg.messageType === 'audio' && msg.audioUrl ? (
+                          <div className="flex items-center gap-2">
+                            <VoiceNote src={msg.audioUrl} duration={msg.audioDuration} isOwn={item.isOwn} peaks={msg.audioPeaks} />
                             {msg.status === 'sending' && (
                               <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.isOwn ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>Sending…</span>
                             )}
@@ -1625,6 +1939,40 @@ function Chat() {
       )
     }
 
+    {/* Media Viewer Modal */}
+    {viewer && (
+      <>
+        <div className="fixed inset-0 bg-black/70 z-50" onClick={closeViewer} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeViewer}>
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeViewer}
+              className="absolute -top-3 -right-3 bg-white text-gray-700 rounded-full p-2 shadow hover:bg-gray-100"
+              aria-label="Close viewer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            {viewer.type === 'image' ? (
+              <img
+                src={viewer.url}
+                alt="media"
+                className="mx-auto max-h-[80vh] w-auto rounded-lg shadow-lg"
+              />
+            ) : (
+              <video
+                src={viewer.url}
+                controls
+                autoPlay
+                preload="metadata"
+                playsInline
+                className="mx-auto max-h-[80vh] w-auto rounded-lg bg-black shadow-lg"
+              />
+            )}
+          </div>
+        </div>
+      </>
+    )}
+
     {/* Input Area */ }
     <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)] shadow-lg">
       {/* Reply Banner */}
@@ -1672,12 +2020,12 @@ function Chat() {
             <div className="grid grid-cols-3 gap-3 w-52">
               {[
                 { icon: Camera, label: 'Camera', color: 'bg-blue-500 hover:bg-blue-600' },
-                { icon: Image, label: 'Gallery', color: 'bg-green-500 hover:bg-green-600' },
+                { icon: Image, label: 'Gallery', color: 'bg-green-500 hover:bg-green-600', onClick: handleOpenGallery },
                 { icon: FileText, label: 'Document', color: 'bg-purple-500 hover:bg-purple-600' },
                 { icon: MapPin, label: 'Location', color: 'bg-red-500 hover:bg-red-600' },
                 { icon: Smile, label: 'Sticker', color: 'bg-orange-500 hover:bg-orange-600' },
               ].map((item) => (
-                <button key={item.label} className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-all duration-200 group">
+                <button key={item.label} className="flex flex-col items-center p-3 hover:bg-gray-50 rounded-xl transition-all duration-200 group" onClick={item.onClick as any}>
                   <div className={`w-12 h-12 ${item.color} rounded-full flex items-center justify-center mb-2 transition-all duration-200 group-hover:scale-110 shadow-md`}>
                     <item.icon className="w-6 h-6 text-white" />
                   </div>
@@ -1689,8 +2037,16 @@ function Chat() {
         </>
       )}
 
-      <div className="px-6 py-4">
+      <div className="px-4 py-2 sm:px-6 sm:py-4">
         <div className="flex items-end space-x-3">
+          {/* Hidden media input */}
+          <input
+            ref={mediaInputRef}
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={handleMediaSelected}
+          />
           {/* Attachment Button */}
           <button
             onClick={(e) => {
@@ -1707,7 +2063,7 @@ function Chat() {
 
           {/* Input Container */}
           <div className="flex-1 relative">
-            <div className={`flex items-end bg-gray-100 rounded-2xl transition-all duration-300 ${isInputFocused ? 'bg-white border-2 border-blue-500 shadow-lg scale-[1.02]' : 'border-2 border-transparent'
+            <div className={`flex items-end bg-gray-100 rounded-2xl transition-all duration-200 ${isInputFocused ? 'bg-white border-2 border-blue-500 shadow-lg' : 'border-2 border-transparent'
               }`}>
               <div className="flex-1">
                 <textarea
@@ -1717,10 +2073,10 @@ function Chat() {
                   onBlur={() => setIsInputFocused(false)}
                   onKeyDown={handleKeyPress}
                   placeholder={`Message ${truncate((chatUser.fullName || chatUser.username).split(' ')[0], 16)}`}
-                  className="chat-textarea w-full px-4 py-3 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-28 sm:max-h-36 leading-relaxed"
+                  className="chat-textarea w-full px-3 py-2 bg-transparent border-0 rounded-2xl focus:outline-none resize-none placeholder-gray-500 text-gray-900 max-h-28 sm:max-h-36 leading-snug"
                   rows={1}
                   style={{
-                    minHeight: '48px',
+                    minHeight: '40px',
                     height: 'auto',
                     overflowY: message.length > 100 ? 'auto' : 'hidden'
                   }}
@@ -1731,7 +2087,7 @@ function Chat() {
               {/* Emoji Button */}
               <button
                 onClick={() => setShowEmojiPicker('composer')}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-all duration-200 flex-shrink-0 mr-2"
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-all duration-200 flex-shrink-0 mr-1 sm:mr-2"
               >
                 <Smile className="w-5 h-5" />
               </button>
@@ -1749,8 +2105,18 @@ function Chat() {
           <div className="flex-shrink-0 flex items-center gap-2">
             {/* Recording pill */}
             {isRecording && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-sm">
+              <div className="flex items-center gap-3 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-sm">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                {/* Animated bars */}
+                <div className="flex items-end gap-[2px] h-6">
+                  {recordPeaks.map((p, i) => (
+                    <div
+                      key={i}
+                      className="w-[3px] bg-red-500/70 rounded-t"
+                      style={{ height: `${Math.max(2, Math.round(p * 22))}px` }}
+                    />
+                  ))}
+                </div>
                 <span className="tabular-nums">{formatDuration(recordElapsed)}</span>
                 <button onClick={cancelRecording} className="text-red-600 hover:text-red-800" title="Cancel">
                   <X className="w-4 h-4" />
