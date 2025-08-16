@@ -957,53 +957,43 @@ function Profile() {
 
       <div className="max-w-2xl mx-auto px-4">
         <div className="relative -mt-4">
-          <div className="h-48 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-2xl overflow-hidden">
-            <img
-              src={profileUser?.cover || defaultCoverImage}
-              alt="Cover"
-              className="w-full h-full object-cover mix-blend-overlay opacity-80"
-            />
-            <button className="absolute top-4 right-4 p-2 bg-black/30 backdrop-blur-sm rounded-lg text-white hover:bg-black/40 transition-all">
-              <Camera className="w-5 h-5" />
-            </button>
+          <div className="h-36 sm:h-48 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-2xl overflow-hidden">
+            {profileUser?.cover && (
+              <img
+                src={profileUser.cover}
+                alt="Cover"
+                className="w-full h-full object-cover mix-blend-overlay opacity-80"
+              />
+            )}
+            {currentUser && profileUser && currentUser._id === profileUser._id && (
+              <button className="absolute top-4 right-4 p-2 bg-black/30 backdrop-blur-sm rounded-lg text-white hover:bg-black/40 transition-all">
+                <Camera className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          <div className="relative px-6 pb-6">
-            <div className="flex items-end justify-between -mt-16 mb-4">
+          <div className="relative px-4 sm:px-6 pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-16 mb-4 gap-4">
               <div className="relative">
                 {profileUser?.avatar ? (
                   <img
                     src={profileUser.avatar}
                     alt="Profile"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-xl"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-100 flex items-center justify-center">
                     <AvatarPlaceholder className="w-full h-full" />
                   </div>
                 )}
-                <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center">
-                  <Edit3 className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex space-x-3 mt-16">
-                {currentUser && profileUser && currentUser._id !== profileUser._id && (
-                  <button
-                    onClick={() => handleFollow(profileUser._id)}
-                    className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                      isFollowing
-                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg"
-                    }`}
-                  >
-                    {isFollowing ? "Following" : "Follow"}
+                {currentUser && profileUser && currentUser._id === profileUser._id && (
+                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full border-2 border-white text-white hover:bg-blue-600 transition-all flex items-center justify-center">
+                    <Edit3 className="w-4 h-4" />
                   </button>
                 )}
-                <button className="px-6 py-2 rounded-xl font-medium bg-white/70 backdrop-blur-sm text-gray-800 border border-gray-200 hover:bg-white transition-all">
-                  Message
-                </button>
               </div>
+              {/* Action buttons moved below info section */}
             </div>
 
             <div className="space-y-3">
@@ -1087,6 +1077,25 @@ function Profile() {
                   </div>
                   <div className="text-sm text-gray-600">Posts</div>
                 </div>
+              </div>
+
+              {/* New action buttons row (below info) */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:space-x-3 mt-3 w-full">
+                {currentUser && profileUser && currentUser._id !== profileUser._id && (
+                  <button
+                    onClick={() => handleFollow(profileUser._id)}
+                    className={`px-6 py-2 rounded-xl font-medium transition-all w-full sm:w-auto ${
+                      isFollowing
+                        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                        : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
+                    }`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                )}
+                <button className="px-6 py-2 rounded-xl font-medium bg-white/70 backdrop-blur-sm text-gray-800 border border-gray-200 hover:bg-white transition-all w-full sm:w-auto">
+                  Message
+                </button>
               </div>
             </div>
           </div>
