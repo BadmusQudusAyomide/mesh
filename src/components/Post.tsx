@@ -287,7 +287,7 @@ const Post = ({
             </div>
           </div>
           <div className="mb-4">
-            <p className="text-gray-800 text-lg leading-relaxed font-medium">
+            <p className="text-gray-800 text-base sm:text-[17px] leading-normal font-normal">
               {post.content}
             </p>
           </div>
