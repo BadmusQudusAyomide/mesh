@@ -30,9 +30,7 @@ import {
 import { io as socketIOClient, Socket } from "socket.io-client";
 import PostsFeed from "../components/PostsFeed";
 
-// Default cover image
-const defaultCoverImage =
-  "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop";
+// Removed unused default cover image (we now show only gradient when no cover)
 
 interface PostProps {
   post: FeedPost;

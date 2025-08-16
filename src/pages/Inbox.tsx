@@ -349,10 +349,11 @@ function Inbox() {
                   </button>
                   <button 
                     onClick={handleNewChat}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                    title="Start a new chat"
+                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-semibold flex items-center gap-2 shadow-sm"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">New Chat</span>
+                    <Plus className="w-5 h-5" />
+                    <span>New Chat</span>
                   </button>
                   <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                     <Settings className="w-5 h-5" />
