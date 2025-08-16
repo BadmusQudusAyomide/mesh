@@ -17,6 +17,9 @@ import {
   Settings,
   Filter,
   ChevronDown,
+  Image as ImageIcon,
+  Mic,
+  Video as VideoIcon,
 } from "lucide-react";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -184,6 +187,16 @@ function Inbox() {
     fetchConversations();
   }, []);
 
+  // Refresh conversations when window gains focus to reflect read-state changes
+  useEffect(() => {
+    const onFocus = () => {
+      // Re-fetch first page; this will also update unread counts
+      fetchConversations();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   // Stop fetching when done loading
   useEffect(() => {
     if (isFetching && !hasMore) {
@@ -251,6 +264,10 @@ function Inbox() {
   };
 
   const handleChatClick = (username: string) => {
+    // Optimistically clear unread count for this conversation
+    setConversations(prev => prev.map(c =>
+      c.user.username === username ? { ...c, unreadCount: 0, lastMessage: { ...c.lastMessage, isRead: true } } : c
+    ));
     navigate(`/chat/${username}`);
   };
 
@@ -487,10 +504,32 @@ function Inbox() {
                             </div>
                             {conversation.lastMessage && (
                               <div className="flex items-center justify-between">
-                                <p className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-[60vw] sm:max-w-[40vw]">
-                                  {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
-                                  {truncatePreview(conversation.lastMessage.content)}
-                                </p>
+                                <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-[60vw] sm:max-w-[40vw] flex items-center gap-1">
+                                  <span className="shrink-0">
+                                    {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
+                                  </span>
+                                  {conversation.lastMessage?.messageType === 'image' && (
+                                    <span className="inline-flex items-center gap-1 shrink-0">
+                                      <ImageIcon className="w-4 h-4 text-blue-500" />
+                                      <span>Photo</span>
+                                    </span>
+                                  )}
+                                  {conversation.lastMessage?.messageType === 'audio' && (
+                                    <span className="inline-flex items-center gap-1 shrink-0">
+                                      <Mic className="w-4 h-4 text-purple-500" />
+                                      <span>Voice note</span>
+                                    </span>
+                                  )}
+                                  {conversation.lastMessage?.messageType === 'video' && (
+                                    <span className="inline-flex items-center gap-1 shrink-0">
+                                      <VideoIcon className="w-4 h-4 text-red-500" />
+                                      <span>Video</span>
+                                    </span>
+                                  )}
+                                  {(!['image','audio','video'].includes(conversation.lastMessage?.messageType)) && (
+                                    <span className="truncate">{truncatePreview(conversation.lastMessage.content)}</span>
+                                  )}
+                                </div>
                                 <div className="flex items-center space-x-2 flex-shrink-0">
                                   <span className="text-xs text-gray-500">
                                     {formatTime(conversation.lastMessage.createdAt)}

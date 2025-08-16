@@ -95,6 +95,46 @@ class ApiService {
     });
   }
 
+  // Upload an image message
+  async uploadImageMessage(
+    recipientId: string,
+    file: Blob,
+    opts: { replyTo?: string } = {}
+  ): Promise<{ message: any }> {
+    const form = new FormData();
+    form.append('image', file, (file as any).name || 'image');
+    form.append('recipientId', recipientId);
+    if (opts.replyTo) form.append('replyTo', opts.replyTo);
+
+    const token = this.getToken();
+    const res = await fetch(`${API_BASE_URL}/messages/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+    return handleResponse(res);
+  }
+
+  // Upload a video message
+  async uploadVideoMessage(
+    recipientId: string,
+    file: Blob,
+    opts: { replyTo?: string } = {}
+  ): Promise<{ message: any }> {
+    const form = new FormData();
+    form.append('video', file, (file as any).name || 'video');
+    form.append('recipientId', recipientId);
+    if (opts.replyTo) form.append('replyTo', opts.replyTo);
+
+    const token = this.getToken();
+    const res = await fetch(`${API_BASE_URL}/messages/video`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+    return handleResponse(res);
+  }
+
   async register(data: RegisterData): Promise<AuthResponse> {
     return this.request<AuthResponse>('/auth/register', {
       method: 'POST',
