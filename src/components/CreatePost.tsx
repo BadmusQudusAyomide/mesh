@@ -20,6 +20,7 @@ interface CreatePostProps {
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   setShowCreatePost: (val: boolean) => void;
+  isPosting?: boolean;
 }
 
 const CreatePost = ({
@@ -31,6 +32,7 @@ const CreatePost = ({
   handleImageUpload,
   fileInputRef,
   setShowCreatePost,
+  isPosting = false,
 }: CreatePostProps) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { user } = useAuth();
@@ -62,15 +64,23 @@ const CreatePost = ({
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0" onClick={onClose}></div>
+      <div
+        className={`absolute inset-0 ${isPosting ? "pointer-events-none" : ""}`}
+        onClick={isPosting ? undefined : onClose}
+      ></div>
       <div className="relative z-10 bg-white rounded-2xl w-full max-w-lg sm:max-w-xl md:max-w-2xl shadow-2xl overflow-hidden my-2 sm:my-4 md:my-8 max-h-[95vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b flex-shrink-0">
           <h3 className="font-bold text-xl text-gray-800">Create Post</h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            disabled={isPosting}
+            className={`p-2 rounded-full transition-colors ${
+              isPosting
+                ? "text-gray-300 cursor-not-allowed"
+                : "hover:bg-gray-100 text-gray-500"
+            }`}
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -104,7 +114,12 @@ const CreatePost = ({
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               placeholder="What's on your mind?"
-              className="w-full min-h-[100px] p-3 sm:p-4 text-gray-800 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              disabled={isPosting}
+              className={`w-full min-h-[100px] p-3 sm:p-4 border border-gray-200 rounded-xl resize-none transition-colors ${
+                isPosting
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              }`}
             />
 
             {previewImage && (
@@ -134,9 +149,14 @@ const CreatePost = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef?.current?.click()}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  disabled={isPosting}
+                  className={`p-2 rounded-full transition-colors ${
+                    isPosting
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-green-500"
+                  }`}
                 >
-                  <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                  <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <input
                   type="file"
@@ -147,41 +167,70 @@ const CreatePost = ({
                 />
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  disabled={isPosting}
+                  className={`p-2 rounded-full transition-colors ${
+                    isPosting
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-blue-500"
+                  }`}
                 >
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  disabled={isPosting}
+                  className={`p-2 rounded-full transition-colors ${
+                    isPosting
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-yellow-500"
+                  }`}
                 >
-                  <Smile className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                  <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  disabled={isPosting}
+                  className={`p-2 rounded-full transition-colors ${
+                    isPosting
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-red-500"
+                  }`}
                 >
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  disabled={isPosting}
+                  className={`p-2 rounded-full transition-colors ${
+                    isPosting
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-purple-500"
+                  }`}
                 >
-                  <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                  <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={!postContent.trim() && !previewImage}
+              disabled={(!postContent.trim() && !previewImage) || isPosting}
               className={`w-full py-3 rounded-xl font-medium transition-all duration-200 ${
-                postContent.trim() || previewImage
+                isPosting
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : postContent.trim() || previewImage
                   ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
-              Post
+              {isPosting ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Posting...</span>
+                </div>
+              ) : (
+                "Post"
+              )}
             </button>
           </div>
         </form>
@@ -197,7 +246,8 @@ function areEqual(prev: CreatePostProps, next: CreatePostProps) {
     prev.fileInputRef === next.fileInputRef &&
     prev.handlePostSubmit === next.handlePostSubmit &&
     prev.handleImageUpload === next.handleImageUpload &&
-    prev.setShowCreatePost === next.setShowCreatePost
+    prev.setShowCreatePost === next.setShowCreatePost &&
+    prev.isPosting === next.isPosting
   );
 }
 
