@@ -141,6 +141,7 @@ function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentInputs, setCommentInputs] = useState<{
     [postId: string]: string;
@@ -298,32 +299,39 @@ function Home() {
     e.preventDefault();
     if (!postContent.trim() && !previewImage) return;
 
-    let imageUrl = "";
-    if (previewImage && previewImage.startsWith("data:")) {
-      // Upload to Cloudinary
-      const formData = new FormData();
-      formData.append("file", dataURLtoFile(previewImage, "post-image.png"));
-      formData.append("upload_preset", UPLOAD_PRESET);
-      try {
-        const res = await fetch(CLOUDINARY_UPLOAD_URL, {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        imageUrl = data.secure_url;
-      } catch {
-        alert("Image upload failed");
-        return;
-      }
-    } else if (previewImage) {
-      imageUrl = previewImage;
-    }
+    // Prevent double submission
+    if (isPosting) return;
+
+    setIsPosting(true);
 
     try {
+      let imageUrl = "";
+      if (previewImage && previewImage.startsWith("data:")) {
+        // Upload to Cloudinary
+        const formData = new FormData();
+        formData.append("file", dataURLtoFile(previewImage, "post-image.png"));
+        formData.append("upload_preset", UPLOAD_PRESET);
+        try {
+          const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          imageUrl = data.secure_url;
+        } catch {
+          alert("Image upload failed");
+          setIsPosting(false);
+          return;
+        }
+      } else if (previewImage) {
+        imageUrl = previewImage;
+      }
+
       const postRes = await apiService.createPost({
         content: postContent,
         image: imageUrl || undefined,
       });
+
       // Add the new post to the feed (optimistic update)
       setPosts([
         {
@@ -350,11 +358,16 @@ function Home() {
         },
         ...posts,
       ]);
+
+      // Reset form and close modal
       setPostContent("");
       setPreviewImage("");
       setShowCreatePost(false);
-    } catch {
+    } catch (error) {
+      console.error("Failed to create post:", error);
       alert("Failed to create post");
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -863,6 +876,7 @@ function Home() {
           handleImageUpload={handleImageUpload}
           fileInputRef={fileInputRef}
           setShowCreatePost={setShowCreatePost}
+          isPosting={isPosting}
         />
       )}
     </div>
