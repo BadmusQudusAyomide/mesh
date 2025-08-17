@@ -231,7 +231,6 @@ function Chat() {
     const [total, setTotal] = useState<number>(Math.max(0, Math.round(duration ?? 0))); // seconds
     const [peaks, setPeaks] = useState<number[] | null>(initialPeaks ?? null);
     const [isScrubbing, setIsScrubbing] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
     const [isBuffering, setIsBuffering] = useState(false);
 
     useEffect(() => {
@@ -246,7 +245,7 @@ function Chat() {
         if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration));
       };
       const onEnd = () => { setIsPlaying(false); setCurrent(0); };
-      const onLoaded = () => { setIsLoaded(true); if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration)); };
+      const onLoaded = () => { if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration)); };
       const onPlay = () => { setIsPlaying(true); setIsBuffering(false); };
       const onPause = () => { setIsPlaying(false); };
       const onWaiting = () => { setIsBuffering(true); };
@@ -417,7 +416,7 @@ function Chat() {
         </div>
 
         {/* Hidden audio element */}
-        <audio ref={audioRef} preload="auto" src={src} onLoadedData={() => setIsLoaded(true)} />
+        <audio ref={audioRef} preload="auto" src={src} />
       </div>
     );
   }
