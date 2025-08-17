@@ -231,6 +231,8 @@ function Chat() {
     const [total, setTotal] = useState<number>(Math.max(0, Math.round(duration ?? 0))); // seconds
     const [peaks, setPeaks] = useState<number[] | null>(initialPeaks ?? null);
     const [isScrubbing, setIsScrubbing] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
 
     useEffect(() => {
       setTotal(Math.max(0, Math.round(duration ?? 0)));
@@ -243,14 +245,46 @@ function Chat() {
         setCurrent(el.currentTime);
         if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration));
       };
-      const onEnd = () => setIsPlaying(false);
+      const onEnd = () => { setIsPlaying(false); setCurrent(0); };
+      const onLoaded = () => { setIsLoaded(true); if (!duration && el.duration && isFinite(el.duration)) setTotal(Math.round(el.duration)); };
+      const onPlay = () => { setIsPlaying(true); setIsBuffering(false); };
+      const onPause = () => { setIsPlaying(false); };
+      const onWaiting = () => { setIsBuffering(true); };
+      const onPlaying = () => { setIsBuffering(false); };
+      const onCanPlay = () => { setIsBuffering(false); };
+      const onStalled = () => { setIsBuffering(true); };
+
+      // Pause other voice notes when this starts playing
+      const onGlobalPlay = (e: Event) => {
+        const detail = (e as CustomEvent).detail as { el: HTMLAudioElement } | undefined;
+        if (detail?.el && detail.el !== el && !el.paused) {
+          el.pause();
+        }
+      };
+
       el.addEventListener('timeupdate', onTime);
       el.addEventListener('ended', onEnd);
+      el.addEventListener('loadedmetadata', onLoaded);
+      el.addEventListener('play', onPlay);
+      el.addEventListener('pause', onPause);
+      el.addEventListener('waiting', onWaiting);
+      el.addEventListener('playing', onPlaying);
+      el.addEventListener('canplay', onCanPlay);
+      el.addEventListener('stalled', onStalled);
+      window.addEventListener('mesh-voice-play', onGlobalPlay as EventListener);
       return () => {
         el.removeEventListener('timeupdate', onTime);
         el.removeEventListener('ended', onEnd);
+        el.removeEventListener('loadedmetadata', onLoaded);
+        el.removeEventListener('play', onPlay);
+        el.removeEventListener('pause', onPause);
+        el.removeEventListener('waiting', onWaiting);
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('canplay', onCanPlay);
+        el.removeEventListener('stalled', onStalled);
+        window.removeEventListener('mesh-voice-play', onGlobalPlay as EventListener);
       };
-    }, [audioRef.current]);
+    }, [audioRef.current, duration]);
 
     // Generate waveform peaks if not provided
     useEffect(() => {
@@ -290,10 +324,23 @@ function Chat() {
       const el = audioRef.current;
       if (!el) return;
       if (el.paused) {
-        el.play().then(() => setIsPlaying(true)).catch(() => {});
+        // Optimistic UI update for instant feedback
+        setIsPlaying(true);
+        setIsBuffering(true);
+        const p = el.play();
+        // Announce globally so other VoiceNotes can pause
+        try { window.dispatchEvent(new CustomEvent('mesh-voice-play', { detail: { el } })); } catch {}
+        if (p && typeof (p as any).then === 'function') {
+          (p as Promise<void>).then(() => setIsBuffering(false)).catch(() => {
+            // Autoplay or decoding error; revert state
+            setIsPlaying(false);
+            setIsBuffering(false);
+          });
+        } else {
+          setIsBuffering(false);
+        }
       } else {
         el.pause();
-        setIsPlaying(false);
       }
     };
 
@@ -317,7 +364,13 @@ function Chat() {
           className={`${isOwn ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-blue-600/10 text-blue-600 hover:bg-blue-600/15'} w-12 h-12 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors active:scale-95`}
           aria-label={isPlaying ? 'Pause voice note' : 'Play voice note'}
         >
-          {isPlaying ? <Pause className="w-6 h-6 sm:w-5 sm:h-5" /> : <Play className="w-6 h-6 sm:w-5 sm:h-5" />}
+          {isBuffering ? (
+            <RotateCw className="w-6 h-6 sm:w-5 sm:h-5 animate-spin" />
+          ) : isPlaying ? (
+            <Pause className="w-6 h-6 sm:w-5 sm:h-5" />
+          ) : (
+            <Play className="w-6 h-6 sm:w-5 sm:h-5" />
+          )}
         </button>
 
         <div className="flex-1 min-w-[200px] w-56 select-none">
@@ -364,7 +417,7 @@ function Chat() {
         </div>
 
         {/* Hidden audio element */}
-        <audio ref={audioRef} preload="metadata" src={src} />
+        <audio ref={audioRef} preload="auto" src={src} onLoadedData={() => setIsLoaded(true)} />
       </div>
     );
   }
