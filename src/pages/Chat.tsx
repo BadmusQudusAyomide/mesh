@@ -182,16 +182,9 @@ function Chat() {
     };
     s.on('newMessage', onNew);
     s.on('messageSent', onNew);
-    const onDeleted = (payload: any) => {
-      const id = payload?.messageId || payload?._id || payload;
-      if (!id) return;
-      setMessages(prev => prev.filter(m => m._id !== id));
-    };
-    s.on('messageDeleted', onDeleted);
     return () => {
       s.off('newMessage', onNew);
       s.off('messageSent', onNew);
-      s.off('messageDeleted', onDeleted);
       s.disconnect();
       socketRef.current = null;
     };
@@ -1120,38 +1113,24 @@ function Chat() {
     } catch (error) {
       console.error('Failed to send message:', error);
       setMessages((prev) => prev.map((m) => (m._id.endsWith('-tmp') ? { ...m, status: 'failed' as const } : m)));
-      // keep draft text on failure
+      setMessage(message);
     }
   };
 
-  // Send on Enter (without Shift)
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  // Permanently delete a message (own messages only)
-  const handleDeleteMessage = async (messageId: string) => {
-    const msg = messages.find(m => m._id === messageId);
-    if (!msg) return;
-    if (msg.sender._id !== currentUser?._id) return;
-
-    const proceed = window.confirm('Delete this message for everyone? This action cannot be undone.');
-    if (!proceed) return;
-
-    const prev = messages;
-    setMessages(prev.filter(m => m._id !== messageId));
-    setContextMenu(null);
-
-    try {
-      await apiService.deleteMessage(messageId);
-    } catch (err) {
-      console.error('Failed to delete message:', err);
-      setMessages(prev);
+  useEffect(() => {
+    const textarea = document.querySelector('.chat-textarea');
+    if (textarea instanceof HTMLTextAreaElement) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
     }
-  };
+  }, [message]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -1876,21 +1855,32 @@ function Chat() {
                           >
                             <span className="w-4 h-4 text-gray-600">#</span>
                           </button>
-                          <button
-                            onClick={() => setShowEmojiPicker(msg._id)}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                            title="Add reaction"
-                          >
-                            <Smile className="w-4 h-4 text-gray-600" />
-                          </button>
                           {msg.sender._id === currentUser?._id && (
-                            <button
-                              onClick={() => handleEditStart(msg)}
-                              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                              title="Edit"
-                            >
-                              <Edit3 className="w-4 h-4 text-gray-600" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleEditStart(msg)}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                title="Edit"
+                              >
+                                <Edit3 className="w-4 h-4 text-gray-600" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  // Optimistic delete
+                                  const m = msg;
+                                  setHoveredMessageId(null);
+                                  setMessages(prev => prev.filter(x => x._id !== m._id));
+                                  try { await apiService.deleteMessage(m._id); } catch (e) {
+                                    // revert on error
+                                    setMessages(prev => [...prev, m].sort((a,b)=> new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()));
+                                  }
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                title="Delete for everyone"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            </>
                           )}
                         </div>
                       )}
@@ -1961,25 +1951,37 @@ function Chat() {
               Copy
             </button>
             {messages.find(m => m._id === contextMenu.messageId)?.sender._id === currentUser?._id && (
-              <>
-                <button
-                  onClick={() => {
-                    const msg = messages.find(m => m._id === contextMenu.messageId);
-                    if (msg) handleEditStart(msg);
-                  }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteMessage(contextMenu.messageId)}
-                  className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center gap-3 text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete for everyone
-                </button>
-              </>
+              <button
+                onClick={async () => {
+                  const msg = messages.find(m => m._id === contextMenu.messageId);
+                  if (!msg) return;
+                  setContextMenu(null);
+                  // Optimistic remove
+                  setMessages(prev => prev.filter(x => x._id !== msg._id));
+                  try {
+                    await apiService.deleteMessage(msg._id);
+                  } catch (e) {
+                    // revert on failure
+                    setMessages(prev => [...prev, msg].sort((a,b)=> new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()));
+                  }
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete for everyone
+              </button>
+            )}
+            {messages.find(m => m._id === contextMenu.messageId)?.sender._id === currentUser?._id && (
+              <button
+                onClick={() => {
+                  const msg = messages.find(m => m._id === contextMenu.messageId);
+                  if (msg) handleEditStart(msg);
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+              >
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </button>
             )}
           </div>
         </>
