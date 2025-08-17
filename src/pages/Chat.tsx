@@ -182,9 +182,16 @@ function Chat() {
     };
     s.on('newMessage', onNew);
     s.on('messageSent', onNew);
+    const onDeleted = (payload: any) => {
+      const id = payload?.messageId || payload?._id || payload;
+      if (!id) return;
+      setMessages(prev => prev.filter(m => m._id !== id));
+    };
+    s.on('messageDeleted', onDeleted);
     return () => {
       s.off('newMessage', onNew);
       s.off('messageSent', onNew);
+      s.off('messageDeleted', onDeleted);
       s.disconnect();
       socketRef.current = null;
     };
@@ -356,7 +363,7 @@ function Chat() {
     };
 
     return (
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}>
         <button
           type="button"
           onClick={toggle}
@@ -372,7 +379,7 @@ function Chat() {
           )}
         </button>
 
-        <div className="flex-1 min-w-[200px] w-56 select-none">
+        <div className={`flex-1 min-w-[200px] w-56 select-none ${isOwn ? 'text-right' : 'text-left'}`}>
           {/* Waveform or fallback progress */}
           <div
             className={`relative group h-10 px-1 rounded-md ${isOwn ? 'bg-white/10' : 'bg-gray-100'}`}
@@ -409,9 +416,10 @@ function Chat() {
               </div>
             )}
           </div>
-          <div className="mt-1 flex items-center justify-between text-[11px] opacity-80">
-            <span>{formatDuration(Math.floor(current))}</span>
-            <span>{formatDuration(Math.max(1, Math.floor(total)))}</span>
+          <div className={`mt-1 flex items-center ${isOwn ? 'justify-end' : 'justify-start'} gap-2 text-[11px] opacity-80`}>
+            <span className="tabular-nums">
+              {formatDuration(Math.floor(current))} / {formatDuration(Math.max(1, Math.floor(total)))}
+            </span>
           </div>
         </div>
 
@@ -1112,24 +1120,9 @@ function Chat() {
     } catch (error) {
       console.error('Failed to send message:', error);
       setMessages((prev) => prev.map((m) => (m._id.endsWith('-tmp') ? { ...m, status: 'failed' as const } : m)));
-      setMessage(message);
+      // keep draft text on failure
     }
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  useEffect(() => {
-    const textarea = document.querySelector('.chat-textarea');
-    if (textarea instanceof HTMLTextAreaElement) {
-      textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
-    }
-  }, [message]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -1939,16 +1932,25 @@ function Chat() {
               Copy
             </button>
             {messages.find(m => m._id === contextMenu.messageId)?.sender._id === currentUser?._id && (
-              <button
-                onClick={() => {
-                  const msg = messages.find(m => m._id === contextMenu.messageId);
-                  if (msg) handleEditStart(msg);
-                }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-              >
-                <Edit3 className="w-4 h-4" />
-                Edit
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    const msg = messages.find(m => m._id === contextMenu.messageId);
+                    if (msg) handleEditStart(msg);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteMessage(contextMenu.messageId)}
+                  className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center gap-3 text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete for everyone
+                </button>
+              </>
             )}
           </div>
         </>
