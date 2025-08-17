@@ -24,9 +24,7 @@ import type { Notification } from "../types";
 const Alert: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  // Removed unused selection-related state to satisfy TS build
 
-  // Infinite scroll state
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -41,7 +39,7 @@ const Alert: React.FC = () => {
   const handleFollowBack = async (userId: string) => {
     try {
       const res = await apiService.followUser(userId);
-      // Update auth context following list
+
       if (!authUser || !updateUser) return;
       if (res.isFollowing) {
         const next = Array.from(new Set([...(authUser.following || []), userId]));
