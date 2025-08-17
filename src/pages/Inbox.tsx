@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Search,
   Plus,
-  CheckCheck,
   Users,
   Sparkles,
   X,
@@ -531,28 +530,21 @@ function Inbox() {
                                     <span className="truncate">{truncatePreview(conversation.lastMessage.content)}</span>
                                   )}
                                 </div>
-                                <div className="flex items-center space-x-2 flex-shrink-0">
-                                  <span className="text-xs text-gray-500">
+                                <div className="flex flex-col items-end flex-shrink-0 w-14 sm:w-16 ml-2">
+                                  <span className="text-[10px] sm:text-xs text-gray-500">
                                     {formatTime(conversation.lastMessage.createdAt)}
                                   </span>
-                                  {conversation.lastMessage?.sender === currentUser?._id && (
-                                    <CheckCheck className={`w-4 h-4 ${
-                                      conversation.lastMessage.isRead ? 'text-blue-500' : 'text-gray-400'
-                                    }`} />
+                                  {conversation.unreadCount > 0 && (
+                                    <span className="mt-1 inline-flex items-center justify-center bg-blue-600 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium min-w-[1.5rem]">
+                                      {conversation.unreadCount}
+                                    </span>
                                   )}
                                 </div>
                               </div>
                             )}
                           </div>
                           
-                          {/* Unread indicator */}
-                          {conversation.unreadCount > 0 && (
-                            <div className="ml-3 flex-shrink-0">
-                              <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                                {conversation.unreadCount}
-                              </div>
-                            </div>
-                          )}
+                          {/* Unread indicator moved into right-side fixed column above */}
                         </div>
                       </div>
                     </div>
@@ -572,7 +564,7 @@ function Inbox() {
             {!hasMore && conversations.length > 0 && (
               <div className="text-center py-8">
                 <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-600">
-                  <CheckCheck className="w-4 h-4 mr-2" />
+                  <Sparkles className="w-4 h-4 mr-2" />
                   You're all caught up!
                 </div>
               </div>
