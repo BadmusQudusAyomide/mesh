@@ -458,15 +458,15 @@ function Inbox() {
               getFilteredConversations().map((conversation) => (
                 <div
                   key={conversation._id}
-                  className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer group ${
+                  className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer group overflow-hidden ${
                     conversation.unreadCount > 0 
                       ? "border-blue-200 bg-blue-50/30" 
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   onClick={() => handleChatClick(conversation.user.username)}
                 >
-                  <div className="p-4">
-                    <div className="flex items-center space-x-3">
+                  <div className="p-4 overflow-hidden">
+                    <div className="flex items-center space-x-3 w-full">
                       {/* Avatar with status */}
                       <div className="relative flex-shrink-0">
                         <img
@@ -490,7 +490,7 @@ function Inbox() {
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1 min-w-0">
                               <h3
-                                className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-[60vw] sm:max-w-[30vw]"
+                                className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-full"
                                 title={conversation.user.fullName}
                               >
                                 {(conversation.user.fullName || conversation.user.username).split(' ')[0]}
@@ -503,8 +503,8 @@ function Inbox() {
                               )}
                             </div>
                             {conversation.lastMessage && (
-                              <div className="flex items-center justify-between">
-                                <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-[60vw] sm:max-w-[40vw] flex items-center gap-1">
+                              <div className="flex items-start justify-between gap-2 w-full overflow-hidden">
+                                <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-full flex items-center gap-1 overflow-hidden">
                                   <span className="shrink-0">
                                     {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
                                   </span>
@@ -527,11 +527,11 @@ function Inbox() {
                                     </span>
                                   )}
                                   {(!['image','audio','video'].includes(conversation.lastMessage?.messageType)) && (
-                                    <span className="truncate">{truncatePreview(conversation.lastMessage.content)}</span>
+                                    <span className="truncate block max-w-full">{truncatePreview(conversation.lastMessage.content)}</span>
                                   )}
                                 </div>
-                                <div className="flex flex-col items-end flex-shrink-0 w-14 sm:w-16 ml-2">
-                                  <span className="text-[10px] sm:text-xs text-gray-500">
+                                <div className="flex flex-col items-end flex-shrink-0 w-16 sm:w-20 ml-2 whitespace-nowrap">
+                                  <span className="text-[10px] sm:text-xs text-gray-500 leading-none">
                                     {formatTime(conversation.lastMessage.createdAt)}
                                   </span>
                                   {conversation.unreadCount > 0 && (
