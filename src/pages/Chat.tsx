@@ -314,10 +314,10 @@ function Chat() {
         <button
           type="button"
           onClick={toggle}
-          className={`${isOwn ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-blue-600/10 text-blue-600 hover:bg-blue-600/15'} w-10 h-10 rounded-full flex items-center justify-center transition-colors`}
+          className={`${isOwn ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-blue-600/10 text-blue-600 hover:bg-blue-600/15'} w-12 h-12 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors active:scale-95`}
           aria-label={isPlaying ? 'Pause voice note' : 'Play voice note'}
         >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          {isPlaying ? <Pause className="w-6 h-6 sm:w-5 sm:h-5" /> : <Play className="w-6 h-6 sm:w-5 sm:h-5" />}
         </button>
 
         <div className="flex-1 min-w-[200px] w-56 select-none">
@@ -331,6 +331,7 @@ function Chat() {
             onTouchStart={(e) => { setIsScrubbing(true); onScrub(e.touches[0].clientX, e.currentTarget); }}
             onTouchMove={(e) => { if (isScrubbing) onScrub(e.touches[0].clientX, e.currentTarget); }}
             onTouchEnd={() => setIsScrubbing(false)}
+            onClick={() => { if (!isScrubbing) toggle(); }}
           >
             {peaks && peaks.length ? (
               <div className="flex items-end h-full gap-[2px]">
@@ -2038,6 +2039,26 @@ function Chat() {
       )}
 
       <div className="px-4 py-2 sm:px-6 sm:py-4">
+        {/* When recording: show full-width recording bar and hide composer */}
+        {isRecording ? (
+          <div className="flex items-center justify-between w-full px-3 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-700">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+              <div className="flex items-end gap-[2px] h-6">
+                {recordPeaks.map((p, i) => (
+                  <div key={i} className="w-[3px] bg-red-500/70 rounded-t" style={{ height: `${Math.max(2, Math.round(p * 22))}px` }} />
+                ))}
+              </div>
+              <span className="tabular-nums text-sm">{formatDuration(recordElapsed)}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={cancelRecording} className="px-3 py-2 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-sm" title="Cancel">Cancel</button>
+              <button onClick={stopRecording} className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 shadow active:scale-95" title="Stop">
+                <Square className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="flex items-end space-x-3">
           {/* Hidden media input */}
           <input
@@ -2151,6 +2172,7 @@ function Chat() {
             )}
           </div>
         </div>
+        )}
 
         {/* Connection Status */}
         {!isOnline && (
