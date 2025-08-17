@@ -1660,7 +1660,12 @@ function Chat() {
     )}
 
     {/* Messages */ }
-    <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'}`}>
+    <div
+      ref={messagesContainerRef}
+      className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'} select-none`}
+      style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {/* Top loader for pagination */}
       {loadingMore && (
         <div className="flex justify-center items-center py-2 text-xs text-gray-500">
