@@ -376,7 +376,7 @@ class ApiService {
     });
   }
 
-  // Permanently delete a message for everyone
+  // Permanently delete a message (for everyone)
   async deleteMessage(messageId: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/messages/${messageId}`, {
       method: 'DELETE',
