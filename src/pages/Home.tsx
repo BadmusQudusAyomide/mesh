@@ -55,8 +55,19 @@ const trendingTopics = [
 // Stories feature not implemented yet: show placeholder in component
 
 // Who to follow (loaded from backend mutual followers)
-type WhoToFollowItem = { name: string; username: string; avatar: string; verified: boolean; followers?: string };
-const numberFormat = (n: number) => (n >= 1000000 ? (n/1000000).toFixed(1) + "M" : n >= 1000 ? (n/1000).toFixed(1) + "K" : String(n));
+type WhoToFollowItem = {
+  name: string;
+  username: string;
+  avatar: string;
+  verified: boolean;
+  followers?: string;
+};
+const numberFormat = (n: number) =>
+  n >= 1000000
+    ? (n / 1000000).toFixed(1) + "M"
+    : n >= 1000
+    ? (n / 1000).toFixed(1) + "K"
+    : String(n);
 
 const liveEvents = [
   { title: "Tech Conference 2024", viewers: "12.5K", category: "Technology" },
@@ -151,7 +162,7 @@ function Home() {
         const res = await apiService.getPostsPaginated(1, 5);
         const mapped = res.posts.map(
           (post: BackendPost): FeedPost => ({
-            authorId: post.user?._id || '',
+            authorId: post.user?._id || "",
             id: post._id,
             user: post.user?.fullName || "Anonymous",
             username: post.user?.username || "anonymous",
@@ -220,13 +231,18 @@ function Home() {
     const loadSuggestions = async () => {
       try {
         const res = await apiService.getUserSuggestions(5);
-        const items = (res?.suggestions || []).map((u: any): WhoToFollowItem => ({
-          name: u.fullName || u.username,
-          username: u.username,
-          avatar: u.avatar,
-          verified: !!u.isVerified,
-          followers: typeof u.followerCount === 'number' ? numberFormat(u.followerCount) : undefined,
-        }));
+        const items = (res?.suggestions || []).map(
+          (u: any): WhoToFollowItem => ({
+            name: u.fullName || u.username,
+            username: u.username,
+            avatar: u.avatar,
+            verified: !!u.isVerified,
+            followers:
+              typeof u.followerCount === "number"
+                ? numberFormat(u.followerCount)
+                : undefined,
+          })
+        );
         setWhoToFollow(items);
       } catch (e) {
         // silent fail for sidebar suggestions
@@ -243,7 +259,7 @@ function Home() {
       const res = await apiService.getPostsPaginated(nextPage, 5);
       const mapped = res.posts.map(
         (post: BackendPost): FeedPost => ({
-          authorId: post.user?._id || '',
+          authorId: post.user?._id || "",
           id: post._id,
           user: post.user?.fullName || "Anonymous",
           username: post.user?.username || "anonymous",
@@ -312,7 +328,7 @@ function Home() {
       setPosts([
         {
           id: postRes.post._id,
-          authorId: user?._id || '',
+          authorId: user?._id || "",
           user: user?.fullName || "Anonymous",
           username: user?.username || "anonymous",
           avatar:
@@ -383,11 +399,13 @@ function Home() {
         const res = await apiService.getPostsPaginated(1, 5);
         const mapped = res.posts.map(
           (post: BackendPost): FeedPost => ({
-            authorId: post.user?._id || '',
+            authorId: post.user?._id || "",
             id: post._id,
             user: post.user?.fullName || "Anonymous",
             username: post.user?.username || "anonymous",
-            avatar: post.user?.avatar || "https://randomuser.me/api/portraits/men/1.jpg",
+            avatar:
+              post.user?.avatar ||
+              "https://randomuser.me/api/portraits/men/1.jpg",
             content: post.content,
             time: new Date(post.createdAt).toLocaleString(),
             image: post.image,
@@ -401,7 +419,9 @@ function Home() {
             engagement: 0,
             trending: undefined,
             category: undefined,
-            commentList: (post.comments as BackendComment[]).map(mapBackendCommentToFeedComment),
+            commentList: (post.comments as BackendComment[]).map(
+              mapBackendCommentToFeedComment
+            ),
           })
         );
         setPosts(mapped);
@@ -458,7 +478,7 @@ function Home() {
     }
   };
 
-    const handleFollow = async (authorId: string) => {
+  const handleFollow = async (authorId: string) => {
     if (!user) return;
 
     try {
@@ -505,13 +525,15 @@ function Home() {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
-      
+
       {/* Modern App Header with Glassmorphism */}
-      <div className={`sticky top-0 z-40 backdrop-blur-xl border-b shadow-lg transition-all duration-300 ${
-        darkMode 
-          ? "bg-gray-900/70 border-gray-700/50" 
-          : "bg-white/70 border-gray-200/50"
-      }`}>
+      <div
+        className={`sticky top-0 z-40 backdrop-blur-xl border-b shadow-lg transition-all duration-300 ${
+          darkMode
+            ? "bg-gray-900/70 border-gray-700/50"
+            : "bg-white/70 border-gray-200/50"
+        }`}
+      >
         <div className="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -524,42 +546,79 @@ function Home() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Mesh
               </h1>
-              <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              <p
+                className={`text-sm ${
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
                 Connect • Share • Discover
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             {/* Search Bar */}
-            <div className={`relative hidden md:flex items-center ${
-              darkMode ? "bg-gray-800/50" : "bg-white/50"
-            } backdrop-blur-sm rounded-2xl border ${
-              darkMode ? "border-gray-700/50" : "border-gray-200/50"
-            } px-4 py-2 min-w-[300px] transition-all duration-200 hover:shadow-md`}>
-              <svg className={`w-5 h-5 mr-3 ${darkMode ? "text-gray-400" : "text-gray-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <div
+              className={`relative hidden md:flex items-center ${
+                darkMode ? "bg-gray-800/50" : "bg-white/50"
+              } backdrop-blur-sm rounded-2xl border ${
+                darkMode ? "border-gray-700/50" : "border-gray-200/50"
+              } px-4 py-2 min-w-[300px] transition-all duration-200 hover:shadow-md`}
+            >
+              <svg
+                className={`w-5 h-5 mr-3 ${
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
               </svg>
-              <input 
-                type="text" 
-                placeholder="Search Mesh..." 
+              <input
+                type="text"
+                placeholder="Search Mesh..."
                 className={`bg-transparent outline-none flex-1 ${
-                  darkMode ? "text-white placeholder-gray-400" : "text-gray-900 placeholder-gray-500"
+                  darkMode
+                    ? "text-white placeholder-gray-400"
+                    : "text-gray-900 placeholder-gray-500"
                 }`}
               />
             </div>
-            
+
             {/* Action Buttons */}
-            <button className={`p-3 rounded-2xl transition-all duration-200 hover:scale-105 ${
-              darkMode 
-                ? "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300" 
-                : "bg-white/50 hover:bg-white/80 text-gray-600"
-            } backdrop-blur-sm border ${
-              darkMode ? "border-gray-700/50" : "border-gray-200/50"
-            }`}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            <button
+              className={`p-3 rounded-2xl transition-all duration-200 hover:scale-105 ${
+                darkMode
+                  ? "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+                  : "bg-white/50 hover:bg-white/80 text-gray-600"
+              } backdrop-blur-sm border ${
+                darkMode ? "border-gray-700/50" : "border-gray-200/50"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 17h5l-5 5v-5z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4"
+                />
               </svg>
             </button>
           </div>
@@ -569,7 +628,6 @@ function Home() {
       {/* Main Content Area */}
       <div className="pb-8 px-4 max-w-7xl mx-auto mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
           {/* Left Sidebar */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-6">
@@ -598,20 +656,26 @@ function Home() {
           {/* Main Feed */}
           <div className="lg:col-span-6 space-y-6">
             {/* Welcome Banner */}
-            <div className={`relative overflow-hidden rounded-3xl p-6 ${
-              darkMode 
-                ? "bg-gradient-to-r from-purple-900/50 to-blue-900/50" 
-                : "bg-gradient-to-r from-purple-500/10 to-blue-500/10"
-            } backdrop-blur-sm border ${
-              darkMode ? "border-gray-700/50" : "border-white/50"
-            } shadow-xl`}>
+            <div
+              className={`relative overflow-hidden rounded-3xl p-6 ${
+                darkMode
+                  ? "bg-gradient-to-r from-purple-900/50 to-blue-900/50"
+                  : "bg-gradient-to-r from-purple-500/10 to-blue-500/10"
+              } backdrop-blur-sm border ${
+                darkMode ? "border-gray-700/50" : "border-white/50"
+              } shadow-xl`}
+            >
               <div className="relative z-10">
-                <h2 className={`text-2xl font-bold mb-2 ${
-                  darkMode ? "text-white" : "text-gray-900"
-                }`}>
+                <h2
+                  className={`text-2xl font-bold mb-2 ${
+                    darkMode ? "text-white" : "text-gray-900"
+                  }`}
+                >
                   Welcome back, {user?.fullName || "Friend"}! 👋
                 </h2>
-                <p className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <p
+                  className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   What's happening in your world today?
                 </p>
               </div>
@@ -620,13 +684,15 @@ function Home() {
             </div>
 
             {/* Stories Section */}
-            <div className={`rounded-3xl p-1 ${
-              darkMode 
-                ? "bg-gradient-to-r from-gray-800/50 to-gray-700/50" 
-                : "bg-gradient-to-r from-white/80 to-gray-50/80"
-            } backdrop-blur-sm border ${
-              darkMode ? "border-gray-700/50" : "border-gray-200/50"
-            } shadow-lg`}>
+            <div
+              className={`rounded-3xl p-1 ${
+                darkMode
+                  ? "bg-gradient-to-r from-gray-800/50 to-gray-700/50"
+                  : "bg-gradient-to-r from-white/80 to-gray-50/80"
+              } backdrop-blur-sm border ${
+                darkMode ? "border-gray-700/50" : "border-gray-200/50"
+              } shadow-lg`}
+            >
               <Stories
                 currentUser={
                   user
@@ -641,59 +707,100 @@ function Home() {
             </div>
 
             {/* Quick Actions */}
-            <div className={`rounded-3xl p-6 ${
-              darkMode 
-                ? "bg-gray-800/50" 
-                : "bg-white/80"
-            } backdrop-blur-sm border ${
-              darkMode ? "border-gray-700/50" : "border-gray-200/50"
-            } shadow-lg`}>
+            <div
+              className={`rounded-3xl p-6 ${
+                darkMode ? "bg-gray-800/50" : "bg-white/80"
+              } backdrop-blur-sm border ${
+                darkMode ? "border-gray-700/50" : "border-gray-200/50"
+              } shadow-lg`}
+            >
               <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-semibold ${
-                  darkMode ? "text-white" : "text-gray-900"
-                }`}>
+                <h3
+                  className={`text-lg font-semibold ${
+                    darkMode ? "text-white" : "text-gray-900"
+                  }`}
+                >
                   Quick Actions
                 </h3>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <button 
+                <button
                   onClick={() => setShowCreatePost(true)}
                   className={`p-4 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                    darkMode 
-                      ? "bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500" 
+                    darkMode
+                      ? "bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500"
                       : "bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-400 hover:to-blue-400"
                   } text-white shadow-lg`}
                 >
                   <div className="text-center">
-                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <svg
+                      className="w-6 h-6 mx-auto mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                     <span className="text-sm font-medium">Post</span>
                   </div>
                 </button>
-                
-                <button className={`p-4 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                  darkMode 
-                    ? "bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500" 
-                    : "bg-gradient-to-br from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400"
-                } text-white shadow-lg`}>
+
+                <button
+                  className={`p-4 rounded-2xl transition-all duration-200 hover:scale-105 ${
+                    darkMode
+                      ? "bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                      : "bg-gradient-to-br from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400"
+                  } text-white shadow-lg`}
+                >
                   <div className="text-center">
-                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <svg
+                      className="w-6 h-6 mx-auto mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
                     <span className="text-sm font-medium">Photo</span>
                   </div>
                 </button>
-                
-                <button className={`p-4 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                  darkMode 
-                    ? "bg-gradient-to-br from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500" 
-                    : "bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400"
-                } text-white shadow-lg`}>
+
+                <button
+                  className={`p-4 rounded-2xl transition-all duration-200 hover:scale-105 ${
+                    darkMode
+                      ? "bg-gradient-to-br from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500"
+                      : "bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400"
+                  } text-white shadow-lg`}
+                >
                   <div className="text-center">
-                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <svg
+                      className="w-6 h-6 mx-auto mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
                     </svg>
                     <span className="text-sm font-medium">Video</span>
                   </div>
@@ -703,9 +810,7 @@ function Home() {
 
             {/* Posts Feed */}
             <div className="space-y-6">
-              {initialLoading && (
-                <PostSkeleton count={5} />
-              )}
+              {initialLoading && <PostSkeleton count={5} />}
               {!initialLoading && posts.length > 0 && (
                 <PostsFeed
                   posts={posts}
@@ -720,13 +825,15 @@ function Home() {
                 />
               )}
               {loadingError && (
-                <div className="text-center text-sm text-red-500">{loadingError}</div>
+                <div className="text-center text-sm text-red-500">
+                  {loadingError}
+                </div>
               )}
-              {isFetching && !initialLoading && (
-                <PostSkeleton count={3} />
-              )}
+              {isFetching && !initialLoading && <PostSkeleton count={3} />}
               {!hasMore && !initialLoading && (
-                <div className="text-center text-xs text-gray-500 py-4">You\'re all caught up</div>
+                <div className="text-center text-xs text-gray-500 py-4">
+                  You\'re all caught up
+                </div>
               )}
             </div>
           </div>
@@ -747,21 +854,16 @@ function Home() {
 
       {/* Create Post Modal */}
       {showCreatePost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCreatePost(false)}></div>
-          <div className="relative z-10 w-full max-w-2xl">
-            <CreatePost
-              postContent={postContent}
-              setPostContent={setPostContent}
-              previewImage={previewImage}
-              setPreviewImage={setPreviewImage}
-              handlePostSubmit={handlePostSubmit}
-              handleImageUpload={handleImageUpload}
-              fileInputRef={fileInputRef}
-              setShowCreatePost={setShowCreatePost}
-            />
-          </div>
-        </div>
+        <CreatePost
+          postContent={postContent}
+          setPostContent={setPostContent}
+          previewImage={previewImage}
+          setPreviewImage={setPreviewImage}
+          handlePostSubmit={handlePostSubmit}
+          handleImageUpload={handleImageUpload}
+          fileInputRef={fileInputRef}
+          setShowCreatePost={setShowCreatePost}
+        />
       )}
     </div>
   );
