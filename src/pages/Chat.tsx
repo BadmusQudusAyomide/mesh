@@ -140,6 +140,7 @@ function Chat() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string } | null>(null);
   const [mobileActionSheet, setMobileActionSheet] = useState<{ messageId: string } | null>(null);
   const [showTopMenu, setShowTopMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<null | { messageId: string }>(null);
 
   // Threading state
   const [threadOpen, setThreadOpen] = useState(false);
@@ -182,9 +183,15 @@ function Chat() {
     };
     s.on('newMessage', onNew);
     s.on('messageSent', onNew);
+    // When a message is deleted by someone, reflect it locally
+    const onDeleted = ({ messageId }: { messageId: string }) => {
+      setMessages(prev => prev.filter(m => m._id !== messageId));
+    };
+    s.on('messageDeleted', onDeleted);
     return () => {
       s.off('newMessage', onNew);
       s.off('messageSent', onNew);
+      s.off('messageDeleted', onDeleted);
       s.disconnect();
       socketRef.current = null;
     };
@@ -1613,16 +1620,6 @@ function Chat() {
             const isOwn = msg.sender._id === currentUser?._id;
             return (
               <div className="space-y-3">
-                {/* Quick reactions */}
-                <div className="flex items-center justify-center gap-2">
-                  {['👍','❤️','😂','😮','😢','😡'].map(em => (
-                    <button
-                      key={em}
-                      onClick={() => { handleReact(msg, em); setMobileActionSheet(null); }}
-                      className="px-3 py-2 text-xl hover:bg-gray-100 rounded-xl"
-                    >{em}</button>
-                  ))}
-                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { handleReply(msg); setMobileActionSheet(null); }}
@@ -1632,15 +1629,17 @@ function Chat() {
                     onClick={() => { handleCopyMessage(msg); setMobileActionSheet(null); }}
                     className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
                   >Copy</button>
-                  <button
-                    onClick={() => { setShowEmojiPicker(msg._id); setMobileActionSheet(null); }}
-                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
-                  >React</button>
                   {isOwn && (
                     <button
                       onClick={() => { handleEditStart(msg); setMobileActionSheet(null); }}
                       className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 text-sm font-medium"
                     >Edit</button>
+                  )}
+                  {isOwn && (
+                    <button
+                      onClick={() => { setMobileActionSheet(null); setConfirmDelete({ messageId: msg._id }); }}
+                      className="col-span-2 px-4 py-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-700 text-sm font-semibold"
+                    >Delete</button>
                   )}
                 </div>
               </div>
@@ -1865,18 +1864,14 @@ function Chat() {
                                 <Edit3 className="w-4 h-4 text-gray-600" />
                               </button>
                               <button
-                                onClick={async () => {
-                                  // Optimistic delete
-                                  const m = msg;
+                                onClick={() => {
                                   setHoveredMessageId(null);
-                                  setMessages(prev => prev.filter(x => x._id !== m._id));
-                                  try { await apiService.deleteMessage(m._id); } catch (e) {
-                                    // revert on error
-                                    setMessages(prev => [...prev, m].sort((a,b)=> new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()));
-                                  }
+                                  setContextMenu(null);
+                                  setMobileActionSheet(null);
+                                  setConfirmDelete({ messageId: msg._id });
                                 }}
                                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                                title="Delete for everyone"
+                                title="Delete"
                               >
                                 <Trash2 className="w-4 h-4 text-red-600" />
                               </button>
@@ -1952,23 +1947,16 @@ function Chat() {
             </button>
             {messages.find(m => m._id === contextMenu.messageId)?.sender._id === currentUser?._id && (
               <button
-                onClick={async () => {
+                onClick={() => {
                   const msg = messages.find(m => m._id === contextMenu.messageId);
                   if (!msg) return;
                   setContextMenu(null);
-                  // Optimistic remove
-                  setMessages(prev => prev.filter(x => x._id !== msg._id));
-                  try {
-                    await apiService.deleteMessage(msg._id);
-                  } catch (e) {
-                    // revert on failure
-                    setMessages(prev => [...prev, msg].sort((a,b)=> new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()));
-                  }
+                  setConfirmDelete({ messageId: msg._id });
                 }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-red-700"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete for everyone
+                Delete
               </button>
             )}
             {messages.find(m => m._id === contextMenu.messageId)?.sender._id === currentUser?._id && (
