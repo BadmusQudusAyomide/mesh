@@ -1124,6 +1124,35 @@ function Chat() {
     }
   };
 
+  // Send on Enter (without Shift)
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Permanently delete a message (own messages only)
+  const handleDeleteMessage = async (messageId: string) => {
+    const msg = messages.find(m => m._id === messageId);
+    if (!msg) return;
+    if (msg.sender._id !== currentUser?._id) return;
+
+    const proceed = window.confirm('Delete this message for everyone? This action cannot be undone.');
+    if (!proceed) return;
+
+    const prev = messages;
+    setMessages(prev.filter(m => m._id !== messageId));
+    setContextMenu(null);
+
+    try {
+      await apiService.deleteMessage(messageId);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      setMessages(prev);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = () => {
       if (showAttachments) {
