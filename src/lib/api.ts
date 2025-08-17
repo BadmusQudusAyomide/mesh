@@ -376,6 +376,13 @@ class ApiService {
     });
   }
 
+  // Permanently delete a message for everyone
+  async deleteMessage(messageId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/messages/${messageId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // React to a message (toggle). Pass emoji like "👍" or ":heart:"
   async reactToMessage(messageId: string, emoji: string): Promise<{ messageId: string; reactions: any[] }> {
     return this.request<{ messageId: string; reactions: any[] }>(`/messages/${messageId}/reactions`, {
