@@ -1976,6 +1976,48 @@ function Chat() {
       )
     }
 
+    {/* Confirm Delete Modal */}
+    {confirmDelete && (
+      <>
+        <div className="fixed inset-0 bg-black/30 z-50" onClick={() => setConfirmDelete(null)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Delete message?</h3>
+                <p className="text-sm text-gray-600 mt-1">This will delete the message for everyone. This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm"
+              >Cancel</button>
+              <button
+                onClick={async () => {
+                  const msg = messages.find(m => m._id === confirmDelete.messageId);
+                  setConfirmDelete(null);
+                  if (!msg) return;
+                  // Optimistic remove
+                  setMessages(prev => prev.filter(x => x._id !== msg._id));
+                  try {
+                    await apiService.deleteMessage(msg._id);
+                  } catch (e) {
+                    // revert on failure
+                    setMessages(prev => [...prev, msg].sort((a,b)=> new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()));
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm"
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
     {/* Emoji Picker */ }
     {
       showEmojiPicker && (
