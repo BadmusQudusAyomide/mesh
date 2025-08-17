@@ -1620,6 +1620,16 @@ function Chat() {
             const isOwn = msg.sender._id === currentUser?._id;
             return (
               <div className="space-y-3">
+                {/* Quick reactions */}
+                <div className="flex items-center justify-center gap-2">
+                  {['👍','❤️','😂','😮','😢','😡'].map(em => (
+                    <button
+                      key={em}
+                      onClick={() => { handleReact(msg, em); setMobileActionSheet(null); }}
+                      className="px-3 py-2 text-xl hover:bg-gray-100 rounded-xl"
+                    >{em}</button>
+                  ))}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { handleReply(msg); setMobileActionSheet(null); }}
@@ -1638,7 +1648,7 @@ function Chat() {
                   {isOwn && (
                     <button
                       onClick={() => { setMobileActionSheet(null); setConfirmDelete({ messageId: msg._id }); }}
-                      className="col-span-2 px-4 py-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-700 text-sm font-semibold"
+                      className="px-4 py-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-700 text-sm font-semibold"
                     >Delete</button>
                   )}
                 </div>
