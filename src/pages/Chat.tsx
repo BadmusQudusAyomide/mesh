@@ -1281,6 +1281,8 @@ function Chat() {
 
   const handleMessageLongPress = (msgId: string, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
+    // Clear any native selection to avoid OS copy/search popups
+    try { window.getSelection()?.removeAllRanges(); } catch {}
     if ('touches' in e) {
       // Mobile long press - open action sheet
       setMobileActionSheet({ messageId: msgId });
@@ -1663,8 +1665,9 @@ function Chat() {
     <div
       ref={messagesContainerRef}
       className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'} select-none`}
-      style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
+      style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'manipulation' as any }}
       onContextMenu={(e) => e.preventDefault()}
+      onSelectStart={(e) => e.preventDefault()}
     >
       {/* Top loader for pagination */}
       {loadingMore && (
@@ -1719,7 +1722,7 @@ function Chat() {
                       onClick={() => selectionMode && handleMessageSelect(msg._id)}
                     >
                       <div
-                        className={`px-3 py-2 shadow-md transition-all duration-200 ${item.isOwn
+                        className={`px-3 py-2 shadow-md transition-all duration-200 select-none ${item.isOwn
                             ? `bg-gradient-to-r from-blue-500 to-purple-600 text-white ${msgIndex === 0 ? 'rounded-2xl rounded-br-md' :
                               msgIndex === item.messages.length - 1 ? 'rounded-2xl rounded-tr-md' :
                                 'rounded-l-2xl rounded-r-md'
@@ -1729,6 +1732,7 @@ function Chat() {
                                 'rounded-r-2xl rounded-l-md'
                             }`
                           } hover:shadow-lg group-hover/message:scale-[1.02]`}
+                        style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
                       >
                         {/* Reply preview */}
                         {msg.replyTo && (
@@ -1797,7 +1801,12 @@ function Chat() {
                             )}
                           </div>
                         ) : (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all">{renderHighlighted(msg.content, searchQuery)}</p>
+                          <p
+                            className="text-sm leading-relaxed whitespace-pre-wrap break-words break-all select-none"
+                            style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                          >
+                            {renderHighlighted(msg.content, searchQuery)}
+                          </p>
                         )}
 
                         <div className={`flex items-center justify-between mt-2 text-gray-500`}>
