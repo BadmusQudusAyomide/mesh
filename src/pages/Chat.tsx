@@ -1667,7 +1667,6 @@ function Chat() {
       className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${isInputFocused ? 'pb-40 sm:pb-28' : 'pb-28'} select-none`}
       style={{ WebkitUserSelect: 'none', userSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'manipulation' as any }}
       onContextMenu={(e) => e.preventDefault()}
-      onSelectStart={(e) => e.preventDefault()}
     >
       {/* Top loader for pagination */}
       {loadingMore && (
