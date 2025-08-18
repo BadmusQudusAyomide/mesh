@@ -21,7 +21,7 @@ import {
   Video as VideoIcon,
 } from "lucide-react";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
 
 interface Conversation {
   _id: string;
@@ -52,8 +52,10 @@ function Inbox() {
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
-  
+  const [filteredConversations, setFilteredConversations] = useState<
+    Conversation[]
+  >([]);
+
   // Infinite scroll state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -73,35 +75,45 @@ function Inbox() {
       withCredentials: true,
     });
     socketRef.current = socket;
-    socket.emit('join', currentUser._id);
-    socket.on('connect', () => {
-      socket.emit('join', currentUser._id);
+    socket.emit("join", currentUser._id);
+    socket.on("connect", () => {
+      socket.emit("join", currentUser._id);
     });
-    socket.on('connect_error', (err) => {
-      console.error('[Inbox] Socket connect_error:', err?.message || err, 'URL:', SOCKET_URL);
+    socket.on("connect_error", (err) => {
+      console.error(
+        "[Inbox] Socket connect_error:",
+        err?.message || err,
+        "URL:",
+        SOCKET_URL
+      );
     });
 
     const upsertConversationFromMessage = (msg: any) => {
       if (!msg || !msg.sender || !msg.recipient) return;
       const sender = msg.sender; // object with _id, username, fullName, avatar
       const recipient = msg.recipient; // may be object or id
-      const recipientId = typeof recipient === 'object' ? recipient._id : recipient;
+      const recipientId =
+        typeof recipient === "object" ? recipient._id : recipient;
       const isIncoming = recipientId?.toString() === currentUser._id.toString();
-      const otherUser = isIncoming ? sender : (typeof recipient === 'object' ? recipient : null);
+      const otherUser = isIncoming
+        ? sender
+        : typeof recipient === "object"
+        ? recipient
+        : null;
       const otherUserId = isIncoming ? sender._id : recipientId;
       if (!otherUserId) return;
 
-      setConversations(prev => {
+      setConversations((prev) => {
         // find existing conversation
-        const idx = prev.findIndex(c => c._id === otherUserId);
+        const idx = prev.findIndex((c) => c._id === otherUserId);
         const updatedLast = {
           _id: msg._id,
           content: msg.content,
-          messageType: msg.messageType || 'text',
+          messageType: msg.messageType || "text",
           createdAt: msg.createdAt || new Date().toISOString(),
           isRead: !isIncoming, // if incoming, not read yet
           sender: sender._id,
-        } as Conversation['lastMessage'];
+        } as Conversation["lastMessage"];
 
         if (idx !== -1) {
           const copy = [...prev];
@@ -137,7 +149,12 @@ function Inbox() {
     };
 
     const handleNewMessage = (msg: any) => {
-      const involvesMe = [msg?.sender?._id, (typeof msg?.recipient === 'object' ? msg?.recipient?._id : msg?.recipient)]
+      const involvesMe = [
+        msg?.sender?._id,
+        typeof msg?.recipient === "object"
+          ? msg?.recipient?._id
+          : msg?.recipient,
+      ]
         .map(String)
         .includes(String(currentUser._id));
       if (!involvesMe) return;
@@ -145,12 +162,12 @@ function Inbox() {
     };
     const handleMessageSent = (msg: any) => handleNewMessage(msg);
 
-    socket.on('newMessage', handleNewMessage);
-    socket.on('messageSent', handleMessageSent);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messageSent", handleMessageSent);
 
     return () => {
-      socket.off('newMessage', handleNewMessage);
-      socket.off('messageSent', handleMessageSent);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messageSent", handleMessageSent);
       socket.disconnect();
       socketRef.current = null;
     };
@@ -159,28 +176,35 @@ function Inbox() {
   // Load more conversations function
   const loadMoreConversations = async () => {
     if (!hasMore) return;
-    
+
     try {
-      const response = await apiService.getConversationsPaginated(currentPage, 5);
+      const response = await apiService.getConversationsPaginated(
+        currentPage,
+        5
+      );
       const newConversations = response.conversations;
-      
-      setConversations(prev => {
+
+      setConversations((prev) => {
         // Prevent duplicates by filtering out conversations that already exist
-        const existingIds = new Set(prev.map(c => c._id));
-        const uniqueNewConversations = newConversations.filter(c => !existingIds.has(c._id));
+        const existingIds = new Set(prev.map((c) => c._id));
+        const uniqueNewConversations = newConversations.filter(
+          (c) => !existingIds.has(c._id)
+        );
         return [...prev, ...uniqueNewConversations];
       });
-      
-      setCurrentPage(prev => prev + 1);
+
+      setCurrentPage((prev) => prev + 1);
       setHasMore(response.pagination.hasMore);
     } catch (err) {
-      console.error('Failed to load more conversations:', err);
-      setError('Failed to load conversations');
+      console.error("Failed to load more conversations:", err);
+      setError("Failed to load conversations");
     }
   };
 
   // Infinite scroll hook
-  const { isFetching, setIsFetching } = useInfiniteScroll(loadMoreConversations);
+  const { isFetching, setIsFetching } = useInfiniteScroll(
+    loadMoreConversations
+  );
 
   useEffect(() => {
     fetchConversations();
@@ -192,8 +216,8 @@ function Inbox() {
       // Re-fetch first page; this will also update unread counts
       fetchConversations();
     };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   // Stop fetching when done loading
@@ -219,7 +243,7 @@ function Inbox() {
       setHasMore(response.pagination.hasMore);
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
-      setError('Failed to load conversations');
+      setError("Failed to load conversations");
     } finally {
       setIsInitialLoading(false);
     }
@@ -254,9 +278,15 @@ function Inbox() {
     } else {
       const filtered = conversations.filter(
         (conversation) =>
-          conversation.user.fullName.toLowerCase().includes(query.toLowerCase()) ||
-          conversation.user.username.toLowerCase().includes(query.toLowerCase()) ||
-          conversation.lastMessage?.content.toLowerCase().includes(query.toLowerCase())
+          conversation.user.fullName
+            .toLowerCase()
+            .includes(query.toLowerCase()) ||
+          conversation.user.username
+            .toLowerCase()
+            .includes(query.toLowerCase()) ||
+          conversation.lastMessage?.content
+            .toLowerCase()
+            .includes(query.toLowerCase())
       );
       setFilteredConversations(filtered);
     }
@@ -264,15 +294,23 @@ function Inbox() {
 
   const handleChatClick = (username: string) => {
     // Optimistically clear unread count for this conversation
-    setConversations(prev => prev.map(c =>
-      c.user.username === username ? { ...c, unreadCount: 0, lastMessage: { ...c.lastMessage, isRead: true } } : c
-    ));
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.user.username === username
+          ? {
+              ...c,
+              unreadCount: 0,
+              lastMessage: { ...c.lastMessage, isRead: true },
+            }
+          : c
+      )
+    );
     navigate(`/chat/${username}`);
   };
 
   // Truncate helper to keep preview short and avoid layout shift
   const getPreviewMax = () => {
-    const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const w = typeof window !== "undefined" ? window.innerWidth : 1024;
     if (w < 360) return 28;
     if (w < 420) return 34;
     if (w < 640) return 42; // base phones
@@ -288,37 +326,44 @@ function Inbox() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
+
     if (diffInMinutes < 1) return "now";
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
     return `${Math.floor(diffInMinutes / 1440)}d`;
   };
 
-  const unreadCount = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
+  const unreadCount = conversations.reduce(
+    (total, conv) => total + conv.unreadCount,
+    0
+  );
 
   const getFilteredConversations = () => {
     let filtered = filteredConversations;
     if (filterType === "unread") {
-      filtered = filtered.filter(conv => conv.unreadCount > 0);
+      filtered = filtered.filter((conv) => conv.unreadCount > 0);
     } else if (filterType === "online") {
-      filtered = filtered.filter(conv => conv.user.isOnline);
+      filtered = filtered.filter((conv) => conv.user.isOnline);
     }
     return filtered;
   };
 
   return (
-    <div className={`min-h-screen transition-all duration-300 ${
-      darkMode ? "bg-gray-900" : "bg-gray-50"
-    }`}>
+    <div
+      className={`min-h-screen transition-all duration-300 ${
+        darkMode ? "bg-gray-900" : "bg-gray-50"
+      }`}
+    >
       <Navigation
         activeTab="messages"
         setActiveTab={() => {}}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
-      
+
       {/* Main Content */}
       <div className="pt-20 md:pt-6 pb-20 md:pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -331,9 +376,13 @@ function Inbox() {
                     <MessageCircle className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      Messages
+                    </h1>
                     <p className="text-sm text-gray-500 mt-1">
-                      {unreadCount > 0 ? `${unreadCount} unread messages` : 'All caught up!'}
+                      {unreadCount > 0
+                        ? `${unreadCount} unread messages`
+                        : "All caught up!"}
                     </p>
                   </div>
                 </div>
@@ -343,10 +392,16 @@ function Inbox() {
                     className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <Filter className="w-4 h-4" />
-                    <span className="text-sm font-medium hidden sm:inline">Filter</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    <span className="text-sm font-medium hidden sm:inline">
+                      Filter
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        showFilters ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
-                  <button 
+                  <button
                     onClick={handleNewChat}
                     title="Start a new chat"
                     className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-semibold flex items-center gap-2 shadow-sm"
@@ -360,7 +415,7 @@ function Inbox() {
                 </div>
               </div>
             </div>
-            
+
             {/* Search and Filters */}
             <div className="p-6 space-y-4">
               {/* Search Bar */}
@@ -374,14 +429,24 @@ function Inbox() {
                   onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
-              
+
               {/* Filter Options */}
               {showFilters && (
                 <div className="flex flex-wrap gap-2">
                   {[
                     { id: "all", label: "All", count: conversations.length },
-                    { id: "unread", label: "Unread", count: conversations.filter(c => c.unreadCount > 0).length },
-                    { id: "online", label: "Online", count: conversations.filter(c => c.user.isOnline).length },
+                    {
+                      id: "unread",
+                      label: "Unread",
+                      count: conversations.filter((c) => c.unreadCount > 0)
+                        .length,
+                    },
+                    {
+                      id: "online",
+                      label: "Online",
+                      count: conversations.filter((c) => c.user.isOnline)
+                        .length,
+                    },
                   ].map((filter) => (
                     <button
                       key={filter.id}
@@ -396,7 +461,9 @@ function Inbox() {
                       {filter.count > 0 && (
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs ${
-                            filterType === filter.id ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                            filterType === filter.id
+                              ? "bg-white/20 text-white"
+                              : "bg-gray-200 text-gray-600"
                           }`}
                         >
                           {filter.count}
@@ -436,18 +503,26 @@ function Inbox() {
                   <MessageCircle className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {searchQuery ? "No conversations found" : filterType === "unread" ? "No unread messages" : filterType === "online" ? "No online contacts" : "No conversations yet"}
+                  {searchQuery
+                    ? "No conversations found"
+                    : filterType === "unread"
+                    ? "No unread messages"
+                    : filterType === "online"
+                    ? "No online contacts"
+                    : "No conversations yet"}
                 </h3>
                 <p className="text-gray-500 max-w-sm mx-auto mb-6">
                   {searchQuery
                     ? "Try adjusting your search terms"
-                    : filterType === "unread" ? "All your messages are read!"
-                    : filterType === "online" ? "No contacts are currently online"
+                    : filterType === "unread"
+                    ? "All your messages are read!"
+                    : filterType === "online"
+                    ? "No contacts are currently online"
                     : "Start following people to begin conversations with them"}
                 </p>
                 {!searchQuery && filterType === "all" && (
-                  <button 
-                    onClick={() => navigate('/home')}
+                  <button
+                    onClick={() => navigate("/home")}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
                     Discover People
@@ -459,8 +534,8 @@ function Inbox() {
                 <div
                   key={conversation._id}
                   className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer group overflow-hidden ${
-                    conversation.unreadCount > 0 
-                      ? "border-blue-200 bg-blue-50/30" 
+                    conversation.unreadCount > 0
+                      ? "border-blue-200 bg-blue-50/30"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   onClick={() => handleChatClick(conversation.user.username)}
@@ -470,7 +545,10 @@ function Inbox() {
                       {/* Avatar with status */}
                       <div className="relative flex-shrink-0">
                         <img
-                          src={conversation.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conversation.user.username}`}
+                          src={
+                            conversation.user.avatar ||
+                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${conversation.user.username}`
+                          }
                           alt={conversation.user.fullName}
                           className="w-12 h-12 rounded-full object-cover"
                         />
@@ -483,7 +561,7 @@ function Inbox() {
                           <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-600 rounded-full"></div>
                         )}
                       </div>
-                      
+
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
@@ -493,12 +571,19 @@ function Inbox() {
                                 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-full"
                                 title={conversation.user.fullName}
                               >
-                                {(conversation.user.fullName || conversation.user.username).split(' ')[0]}
+                                {
+                                  (
+                                    conversation.user.fullName ||
+                                    conversation.user.username
+                                  ).split(" ")[0]
+                                }
                               </h3>
                               {conversation.user.isOnline && (
                                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
                                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                  <span className="text-green-700 text-xs font-medium">Online</span>
+                                  <span className="text-green-700 text-xs font-medium">
+                                    Online
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -506,33 +591,47 @@ function Inbox() {
                               <div className="flex items-start justify-between gap-2 w-full overflow-hidden">
                                 <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-full flex items-center gap-1 overflow-hidden">
                                   <span className="shrink-0">
-                                    {conversation.lastMessage.sender === currentUser?._id ? 'You: ' : ''}
+                                    {conversation.lastMessage.sender ===
+                                    currentUser?._id
+                                      ? "You: "
+                                      : ""}
                                   </span>
-                                  {conversation.lastMessage?.messageType === 'image' && (
+                                  {conversation.lastMessage?.messageType ===
+                                    "image" && (
                                     <span className="inline-flex items-center gap-1 shrink-0">
                                       <ImageIcon className="w-4 h-4 text-blue-500" />
                                       <span>Photo</span>
                                     </span>
                                   )}
-                                  {conversation.lastMessage?.messageType === 'audio' && (
+                                  {conversation.lastMessage?.messageType ===
+                                    "audio" && (
                                     <span className="inline-flex items-center gap-1 shrink-0">
                                       <Mic className="w-4 h-4 text-purple-500" />
                                       <span>Voice note</span>
                                     </span>
                                   )}
-                                  {conversation.lastMessage?.messageType === 'video' && (
+                                  {conversation.lastMessage?.messageType ===
+                                    "video" && (
                                     <span className="inline-flex items-center gap-1 shrink-0">
                                       <VideoIcon className="w-4 h-4 text-red-500" />
                                       <span>Video</span>
                                     </span>
                                   )}
-                                  {(!['image','audio','video'].includes(conversation.lastMessage?.messageType)) && (
-                                    <span className="truncate block max-w-full">{truncatePreview(conversation.lastMessage.content)}</span>
+                                  {!["image", "audio", "video"].includes(
+                                    conversation.lastMessage?.messageType
+                                  ) && (
+                                    <span className="truncate block max-w-full">
+                                      {truncatePreview(
+                                        conversation.lastMessage.content
+                                      )}
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex flex-col items-end flex-shrink-0 w-16 sm:w-20 ml-2 whitespace-nowrap">
                                   <span className="text-[10px] sm:text-xs text-gray-500 leading-none">
-                                    {formatTime(conversation.lastMessage.createdAt)}
+                                    {formatTime(
+                                      conversation.lastMessage.createdAt
+                                    )}
                                   </span>
                                   {conversation.unreadCount > 0 && (
                                     <span className="mt-1 inline-flex items-center justify-center bg-blue-600 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium min-w-[1.5rem]">
@@ -543,7 +642,7 @@ function Inbox() {
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Unread indicator moved into right-side fixed column above */}
                         </div>
                       </div>
@@ -552,14 +651,14 @@ function Inbox() {
                 </div>
               ))
             )}
-            
+
             {/* Loading more conversations */}
             {isFetching && hasMore && (
               <div className="mt-6">
                 <ConversationSkeleton count={3} />
               </div>
             )}
-            
+
             {/* End of conversations message */}
             {!hasMore && conversations.length > 0 && (
               <div className="text-center py-8">
@@ -585,8 +684,12 @@ function Inbox() {
                     <Users className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">New Chat</h3>
-                    <p className="text-sm text-gray-500">Start a conversation with mutual followers</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      New Chat
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Start a conversation with mutual followers
+                    </p>
                   </div>
                 </div>
                 <button
@@ -604,7 +707,9 @@ function Inbox() {
                 <div className="flex items-center justify-center py-8">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-600">Loading mutual followers...</span>
+                    <span className="text-gray-600">
+                      Loading mutual followers...
+                    </span>
                   </div>
                 </div>
               ) : mutualFollowers.length === 0 ? (
@@ -612,9 +717,12 @@ function Inbox() {
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-blue-500" />
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">No mutual followers yet</h4>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    No mutual followers yet
+                  </h4>
                   <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                    Follow people and have them follow you back to start chatting with mutual followers.
+                    Follow people and have them follow you back to start
+                    chatting with mutual followers.
                   </p>
                 </div>
               ) : (
@@ -622,10 +730,11 @@ function Inbox() {
                   <div className="flex items-center gap-2 mb-4">
                     <Sparkles className="w-4 h-4 text-blue-500" />
                     <span className="text-sm text-gray-600">
-                      {mutualFollowers.length} mutual follower{mutualFollowers.length !== 1 ? 's' : ''}
+                      {mutualFollowers.length} mutual follower
+                      {mutualFollowers.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  
+
                   <div className="max-h-64 overflow-y-auto space-y-2">
                     {mutualFollowers.map((user) => (
                       <button
@@ -635,7 +744,10 @@ function Inbox() {
                       >
                         <div className="relative">
                           <img
-                            src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                            src={
+                              user.avatar ||
+                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                            }
                             alt={user.fullName}
                             className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
                           />
@@ -646,9 +758,11 @@ function Inbox() {
                             className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors"
                             title={user.fullName}
                           >
-                            {(user.fullName || user.username).split(' ')[0]}
+                            {(user.fullName || user.username).split(" ")[0]}
                           </h4>
-                          <p className="text-sm text-gray-500">@{user.username}</p>
+                          <p className="text-sm text-gray-500">
+                            @{user.username}
+                          </p>
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageCircle className="w-5 h-5 text-blue-500" />
