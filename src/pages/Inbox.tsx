@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
+import { API_BASE_URL } from "../config";
 import useInfiniteScroll from "../hooks/useInfiniteScroll";
 import ConversationSkeleton from "../components/ConversationSkeleton";
 import socketIOClient from "socket.io-client";
@@ -21,7 +22,8 @@ import {
   Video as VideoIcon,
 } from "lucide-react";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
 
 interface Conversation {
   _id: string;
