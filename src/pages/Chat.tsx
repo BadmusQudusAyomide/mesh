@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
+import { API_BASE_URL } from "../config";
 import socketIOClient from "socket.io-client";
 // Add message virtualization for large conversations
 // Virtualize search results list to keep main view unchanged and avoid complex variable heights
@@ -37,7 +38,8 @@ import { Square } from "lucide-react";
 // Icons for custom audio player
 import { Play, Pause } from "lucide-react";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
 
 // Highlight helper for search results and inline messages
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
