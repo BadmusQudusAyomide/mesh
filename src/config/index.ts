@@ -4,8 +4,8 @@ const config = {
     apiBaseUrl: 'http://localhost:5000/api',
   },
   production: {
-    // Railway backend URL
-    apiBaseUrl: import.meta.env.VITE_API_URL || 'https://mezzzzhh-production.up.railway.app/api',
+    // Render backend URL
+    apiBaseUrl: import.meta.env.VITE_API_URL || 'https://mesh-neq3.onrender.com/api',
   },
 };
 

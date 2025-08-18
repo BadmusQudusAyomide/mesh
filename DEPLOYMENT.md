@@ -11,21 +11,24 @@ The `vercel.json` file is already configured to handle client-side routing. This
 Before deploying, set these environment variables in your Vercel project:
 
 ```bash
-# Backend API URL (Railway deployment)
-VITE_API_URL=https://mezzzzhh-production.up.railway.app/api
+# Backend API URL (Render deployment)
+VITE_API_URL=https://mesh-neq3.onrender.com/api
+
+# WebSocket URL (for real-time features)
+VITE_SOCKET_URL=https://mesh-neq3.onrender.com
 
 # Optional
 VITE_APP_NAME=Mesh
 VITE_APP_VERSION=1.0.0
 ```
 
-**✅ Backend Deployed**: Your Railway backend is now live at `https://mezzzzhh-production.up.railway.app`
+**✅ Backend Deployed**: Your Render backend is now live at `https://mesh-neq3.onrender.com`
 
 ### 3. Backend Deployment
 
 You'll need to deploy your backend separately. Options include:
 
-- **Railway**: Easy deployment with MongoDB integration
+- **Render**: Easy deployment with MongoDB integration
 - **Render**: Free tier available
 - **Heroku**: Paid service
 - **DigitalOcean**: More control
