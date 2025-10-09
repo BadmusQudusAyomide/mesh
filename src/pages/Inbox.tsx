@@ -100,8 +100,8 @@ function Inbox() {
       const otherUser = isIncoming
         ? sender
         : typeof recipient === "object"
-        ? recipient
-        : null;
+          ? recipient
+          : null;
       const otherUserId = isIncoming ? sender._id : recipientId;
       if (!otherUserId) return;
 
@@ -300,10 +300,10 @@ function Inbox() {
       prev.map((c) =>
         c.user.username === username
           ? {
-              ...c,
-              unreadCount: 0,
-              lastMessage: { ...c.lastMessage, isRead: true },
-            }
+            ...c,
+            unreadCount: 0,
+            lastMessage: { ...c.lastMessage, isRead: true },
+          }
           : c
       )
     );
@@ -354,14 +354,10 @@ function Inbox() {
   };
 
   return (
-    <div
-      className={`min-h-screen transition-all duration-300 ${
-        darkMode ? "bg-gray-900" : "bg-gray-50"
-      }`}
-    >
+    <div className="min-h-screen bg-gray-50 transition-colors duration-300">
       <Navigation
         activeTab="messages"
-        setActiveTab={() => {}}
+        setActiveTab={() => { }}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
@@ -370,63 +366,62 @@ function Inbox() {
       <div className="pt-20 md:pt-6 pb-20 md:pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-gray-200/50 mb-6 shadow-sm">
+            <div className="p-5 border-b border-gray-200/30">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-white" />
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center border border-gray-200">
+                    <MessageCircle className="w-5 h-5 text-gray-800" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="text-xl font-semibold text-gray-900">
                       Messages
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 mt-0.5">
                       {unreadCount > 0
                         ? `${unreadCount} unread messages`
                         : "All caught up!"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="flex items-center space-x-1.5 px-2.5 py-1.5 text-gray-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
                   >
                     <Filter className="w-4 h-4" />
                     <span className="text-sm font-medium hidden sm:inline">
                       Filter
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
-                        showFilters ? "rotate-180" : ""
-                      }`}
+                      className={`w-3.5 h-3.5 transition-transform ${showFilters ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
                   <button
                     onClick={handleNewChat}
                     title="Start a new chat"
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-semibold flex items-center gap-2 shadow-sm"
+                    className="px-3.5 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1.5 shadow-sm"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4" />
                     <span>New Chat</span>
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Settings className="w-5 h-5" />
+                  <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm">
+                    <Settings className="w-4.5 h-4.5" />
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Search and Filters */}
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-3">
               {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search conversations..."
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white/50 border border-gray-200/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-transparent transition-all backdrop-blur-sm"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -453,20 +448,18 @@ function Inbox() {
                     <button
                       key={filter.id}
                       onClick={() => setFilterType(filter.id)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
-                        filterType === filter.id
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                      className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-sm font-medium ${filterType === filter.id
+                          ? "bg-gray-900 text-white"
+                          : "bg-white/50 text-gray-600 hover:bg-white/80"
+                        } backdrop-blur-sm`}
                     >
                       <span>{filter.label}</span>
                       {filter.count > 0 && (
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            filterType === filter.id
+                          className={`px-1.5 py-0.5 rounded-full text-xs ${filterType === filter.id
                               ? "bg-white/20 text-white"
                               : "bg-gray-200 text-gray-600"
-                          }`}
+                            }`}
                         >
                           {filter.count}
                         </span>
@@ -484,48 +477,48 @@ function Inbox() {
             {isInitialLoading ? (
               <ConversationSkeleton count={5} />
             ) : error ? (
-              <div className="text-center py-12">
-                <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <X className="h-6 w-6 text-red-600" />
+              <div className="text-center py-10">
+                <div className="mx-auto h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                  <X className="h-5 w-5 text-red-600" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base font-medium text-gray-900 mb-1.5">
                   Failed to load conversations
                 </h3>
-                <p className="text-gray-500 mb-4">{error}</p>
+                <p className="text-gray-500 mb-3 text-sm">{error}</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-3.5 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
                 >
                   Try Again
                 </button>
               </div>
             ) : getFilteredConversations().length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageCircle className="w-8 h-8 text-gray-400" />
+              <div className="text-center py-10">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <MessageCircle className="w-7 h-7 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base font-semibold text-gray-900 mb-1.5">
                   {searchQuery
                     ? "No conversations found"
                     : filterType === "unread"
-                    ? "No unread messages"
-                    : filterType === "online"
-                    ? "No online contacts"
-                    : "No conversations yet"}
+                      ? "No unread messages"
+                      : filterType === "online"
+                        ? "No online contacts"
+                        : "No conversations yet"}
                 </h3>
-                <p className="text-gray-500 max-w-sm mx-auto mb-6">
+                <p className="text-gray-500 max-w-sm mx-auto mb-4 text-sm">
                   {searchQuery
                     ? "Try adjusting your search terms"
                     : filterType === "unread"
-                    ? "All your messages are read!"
-                    : filterType === "online"
-                    ? "No contacts are currently online"
-                    : "Start following people to begin conversations with them"}
+                      ? "All your messages are read!"
+                      : filterType === "online"
+                        ? "No contacts are currently online"
+                        : "Start following people to begin conversations with them"}
                 </p>
                 {!searchQuery && filterType === "all" && (
                   <button
                     onClick={() => navigate("/home")}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
                   >
                     Discover People
                   </button>
@@ -535,14 +528,13 @@ function Inbox() {
               getFilteredConversations().map((conversation) => (
                 <div
                   key={conversation._id}
-                  className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer group overflow-hidden ${
-                    conversation.unreadCount > 0
+                  className={`bg-white/70 backdrop-blur-sm rounded-xl border transition-all duration-200 hover:shadow-sm cursor-pointer group overflow-hidden ${conversation.unreadCount > 0
                       ? "border-blue-200 bg-blue-50/30"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
+                      : "border-gray-200/50 hover:border-gray-300/50"
+                    }`}
                   onClick={() => handleChatClick(conversation.user.username)}
                 >
-                  <div className="p-4 overflow-hidden">
+                  <div className="p-3.5 overflow-hidden">
                     <div className="flex items-center space-x-3 w-full">
                       {/* Avatar with status */}
                       <div className="relative flex-shrink-0">
@@ -552,15 +544,13 @@ function Inbox() {
                             `https://api.dicebear.com/7.x/avataaars/svg?seed=${conversation.user.username}`
                           }
                           alt={conversation.user.fullName}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-11 h-11 rounded-full object-cover border border-gray-200"
                         />
                         {conversation.user.isOnline && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
-                            <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
-                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                         )}
                         {conversation.unreadCount > 0 && (
-                          <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                          <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
                         )}
                       </div>
 
@@ -568,9 +558,9 @@ function Inbox() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-0.5 min-w-0">
                               <h3
-                                className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate max-w-full"
+                                className="font-medium text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate max-w-full"
                                 title={conversation.user.fullName}
                               >
                                 {
@@ -581,8 +571,8 @@ function Inbox() {
                                 }
                               </h3>
                               {conversation.user.isOnline && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-100 rounded-full">
+                                  <div className="w-1 h-1 bg-green-500 rounded-full"></div>
                                   <span className="text-green-700 text-xs font-medium">
                                     Online
                                   </span>
@@ -594,49 +584,49 @@ function Inbox() {
                                 <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-full flex items-center gap-1 overflow-hidden">
                                   <span className="shrink-0">
                                     {conversation.lastMessage.sender ===
-                                    currentUser?._id
+                                      currentUser?._id
                                       ? "You: "
                                       : ""}
                                   </span>
                                   {conversation.lastMessage?.messageType ===
                                     "image" && (
-                                    <span className="inline-flex items-center gap-1 shrink-0">
-                                      <ImageIcon className="w-4 h-4 text-blue-500" />
-                                      <span>Photo</span>
-                                    </span>
-                                  )}
+                                      <span className="inline-flex items-center gap-1 shrink-0">
+                                        <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                                        <span>Photo</span>
+                                      </span>
+                                    )}
                                   {conversation.lastMessage?.messageType ===
                                     "audio" && (
-                                    <span className="inline-flex items-center gap-1 shrink-0">
-                                      <Mic className="w-4 h-4 text-purple-500" />
-                                      <span>Voice note</span>
-                                    </span>
-                                  )}
+                                      <span className="inline-flex items-center gap-1 shrink-0">
+                                        <Mic className="w-3.5 h-3.5 text-purple-500" />
+                                        <span>Voice note</span>
+                                      </span>
+                                    )}
                                   {conversation.lastMessage?.messageType ===
                                     "video" && (
-                                    <span className="inline-flex items-center gap-1 shrink-0">
-                                      <VideoIcon className="w-4 h-4 text-red-500" />
-                                      <span>Video</span>
-                                    </span>
-                                  )}
+                                      <span className="inline-flex items-center gap-1 shrink-0">
+                                        <VideoIcon className="w-3.5 h-3.5 text-red-500" />
+                                        <span>Video</span>
+                                      </span>
+                                    )}
                                   {!["image", "audio", "video"].includes(
                                     conversation.lastMessage?.messageType
                                   ) && (
-                                    <span className="truncate block max-w-full">
-                                      {truncatePreview(
-                                        conversation.lastMessage.content
-                                      )}
-                                    </span>
-                                  )}
+                                      <span className="truncate block max-w-full">
+                                        {truncatePreview(
+                                          conversation.lastMessage.content
+                                        )}
+                                      </span>
+                                    )}
                                 </div>
-                                <div className="flex flex-col items-end flex-shrink-0 w-16 sm:w-20 ml-2 whitespace-nowrap">
+                                <div className="flex flex-col items-end flex-shrink-0 w-14 sm:w-16 ml-2 whitespace-nowrap">
                                   <span className="text-[10px] sm:text-xs text-gray-500 leading-none">
                                     {formatTime(
                                       conversation.lastMessage.createdAt
                                     )}
                                   </span>
                                   {conversation.unreadCount > 0 && (
-                                    <span className="mt-1 inline-flex items-center justify-center bg-blue-600 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium min-w-[1.5rem]">
+                                    <span className="mt-0.5 inline-flex items-center justify-center bg-blue-600 text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-medium min-w-[1.25rem]">
                                       {conversation.unreadCount}
                                     </span>
                                   )}
@@ -644,8 +634,6 @@ function Inbox() {
                               </div>
                             )}
                           </div>
-
-                          {/* Unread indicator moved into right-side fixed column above */}
                         </div>
                       </div>
                     </div>
@@ -656,16 +644,16 @@ function Inbox() {
 
             {/* Loading more conversations */}
             {isFetching && hasMore && (
-              <div className="mt-6">
+              <div className="mt-4">
                 <ConversationSkeleton count={3} />
               </div>
             )}
 
             {/* End of conversations message */}
             {!hasMore && conversations.length > 0 && (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-600">
-                  <Sparkles className="w-4 h-4 mr-2" />
+              <div className="text-center py-6">
+                <div className="inline-flex items-center px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600">
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                   You're all caught up!
                 </div>
               </div>
@@ -676,73 +664,73 @@ function Inbox() {
 
       {/* New Chat Modal */}
       {showNewChatModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden border border-gray-200/50">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200">
+            <div className="px-5 py-3.5 border-b border-gray-200/30">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                    <Users className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-white rounded-lg border border-gray-200">
+                    <Users className="w-4 h-4 text-gray-800" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-base font-medium text-gray-900">
                       New Chat
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-gray-500">
                       Start a conversation with mutual followers
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowNewChatModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <X className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6">
+            <div className="p-5">
               {loadingMutualFollowers ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-600">
+                <div className="flex items-center justify-center py-6">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-600 text-sm">
                       Loading mutual followers...
                     </span>
                   </div>
                 </div>
               ) : mutualFollowers.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-blue-500" />
+                <div className="text-center py-6">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-7 h-7 text-gray-500" />
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h4 className="text-base font-medium text-gray-900 mb-1.5">
                     No mutual followers yet
                   </h4>
-                  <p className="text-gray-500 text-sm max-w-sm mx-auto">
+                  <p className="text-gray-500 text-xs max-w-sm mx-auto">
                     Follow people and have them follow you back to start
                     chatting with mutual followers.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm text-gray-600">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-xs text-gray-600">
                       {mutualFollowers.length} mutual follower
                       {mutualFollowers.length !== 1 ? "s" : ""}
                     </span>
                   </div>
 
-                  <div className="max-h-64 overflow-y-auto space-y-2">
+                  <div className="max-h-60 overflow-y-auto space-y-1.5">
                     {mutualFollowers.map((user) => (
                       <button
                         key={user._id}
                         onClick={() => startChatWithUser(user.username)}
-                        className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors group"
+                        className="w-full flex items-center gap-3 p-2.5 hover:bg-white/50 rounded-xl transition-colors group backdrop-blur-sm"
                       >
                         <div className="relative">
                           <img
@@ -751,23 +739,23 @@ function Inbox() {
                               `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                             }
                             alt={user.fullName}
-                            className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
                           />
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
                         <div className="flex-1 text-left">
                           <h4
-                            className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors"
+                            className="font-medium text-gray-900 group-hover:text-gray-700 transition-colors text-sm"
                             title={user.fullName}
                           >
                             {(user.fullName || user.username).split(" ")[0]}
                           </h4>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs text-gray-500">
                             @{user.username}
                           </p>
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MessageCircle className="w-5 h-5 text-blue-500" />
+                          <MessageCircle className="w-4 h-4 text-gray-500" />
                         </div>
                       </button>
                     ))}

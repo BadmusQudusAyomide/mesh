@@ -63,21 +63,21 @@ const Alert: React.FC = () => {
   const getAlertIcon = (type: string) => {
     switch (type) {
       case "like":
-        return <Heart className="w-4 h-4 text-red-500" />;
+        return <Heart className="w-3.5 h-3.5 text-red-500" />;
       case "comment":
-        return <MessageCircle className="w-4 h-4 text-blue-500" />;
+        return <MessageCircle className="w-3.5 h-3.5 text-blue-500" />;
       case "message":
-        return <MessageCircle className="w-4 h-4 text-blue-600" />;
+        return <MessageCircle className="w-3.5 h-3.5 text-blue-600" />;
       case "follow":
-        return <UserPlus className="w-4 h-4 text-green-500" />;
+        return <UserPlus className="w-3.5 h-3.5 text-green-500" />;
       case "mention":
-        return <AtSign className="w-4 h-4 text-purple-500" />;
+        return <AtSign className="w-3.5 h-3.5 text-purple-500" />;
       case "share":
-        return <Share2 className="w-4 h-4 text-orange-500" />;
+        return <Share2 className="w-3.5 h-3.5 text-orange-500" />;
       case "bookmark":
-        return <Bookmark className="w-4 h-4 text-blue-500" />;
+        return <Bookmark className="w-3.5 h-3.5 text-blue-500" />;
       default:
-        return <Bell className="w-4 h-4 text-gray-500" />;
+        return <Bell className="w-3.5 h-3.5 text-gray-500" />;
     }
   };
 
@@ -128,10 +128,9 @@ const Alert: React.FC = () => {
         setNotifications((prev) => {
           const existingIds = new Set(prev.map((n) => n._id));
           const toAdd = response.notifications.filter((n) => !existingIds.has(n._id));
-          // Keep already-present (including live) first, then append fetched unique
           return [...prev, ...toAdd];
         });
-        setCurrentPage(2); // Next page to load
+        setCurrentPage(2);
         setHasMore(response.pagination.hasMore);
       } catch (err) {
         console.error("Failed to load initial notifications:", err);
@@ -169,53 +168,52 @@ const Alert: React.FC = () => {
       : notifications.filter((alert: Notification) => alert.type === activeTab);
 
   return (
-    <div className={`min-h-screen transition-all duration-300 bg-gray-50`}>
+    <div className="min-h-screen bg-gray-50 transition-colors duration-300">
       <Navigation
         activeTab="notifications"
         setActiveTab={setActiveTab}
         darkMode={false}
-        setDarkMode={() => {}}
+        setDarkMode={() => { }}
       />
 
       {/* Main Content */}
       <div className="pt-20 md:pt-6 pb-20 md:pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-gray-200/50 mb-6 shadow-sm">
+            <div className="p-5 border-b border-gray-200/30">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Bell className="w-6 h-6 text-white" />
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center border border-gray-200">
+                    <Bell className="w-5 h-5 text-gray-800" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="text-xl font-semibold text-gray-900">
                       Notifications
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 mt-0.5">
                       {filteredAlerts.filter((alert) => !alert.isRead).length > 0
                         ? `${filteredAlerts.filter((alert) => !alert.isRead).length} unread`
                         : "All caught up!"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="flex items-center space-x-1.5 px-2.5 py-1.5 text-gray-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
                   >
                     <Filter className="w-4 h-4" />
                     <span className="text-sm font-medium">Filter</span>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
-                        showFilters ? "rotate-180" : ""
-                      }`}
+                      className={`w-3.5 h-3.5 transition-transform ${showFilters ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
                   {filteredAlerts.filter((alert) => !alert.isRead).length > 0 && (
                     <button
                       onClick={markAllAsRead}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      className="px-3.5 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
                     >
                       Mark all read
                     </button>
@@ -225,7 +223,7 @@ const Alert: React.FC = () => {
             </div>
             {/* Filter Tabs */}
             {showFilters && (
-              <div className="px-6 pb-4">
+              <div className="px-5 pb-3">
                 <div className="flex flex-wrap gap-2">
                   {[
                     {
@@ -280,21 +278,19 @@ const Alert: React.FC = () => {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
-                          activeTab === tab.id
-                            ? "bg-blue-600 text-white shadow-sm"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
+                        className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-sm font-medium ${activeTab === tab.id
+                            ? "bg-gray-900 text-white"
+                            : "bg-white/50 text-gray-600 hover:bg-white/80"
+                          } backdrop-blur-sm`}
                       >
-                        <IconComponent className="w-4 h-4" />
+                        <IconComponent className="w-3.5 h-3.5" />
                         <span>{tab.label}</span>
                         {tab.count > 0 && (
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs ${
-                              activeTab === tab.id
+                            className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === tab.id
                                 ? "bg-white/20 text-white"
                                 : "bg-gray-200 text-gray-600"
-                            }`}
+                              }`}
                           >
                             {tab.count}
                           </span>
@@ -309,8 +305,8 @@ const Alert: React.FC = () => {
           {/* Notifications List */}
           <div className="space-y-3">
             {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
               </div>
             ) : (
               <>
@@ -318,28 +314,28 @@ const Alert: React.FC = () => {
                 {isInitialLoading && filteredAlerts.length === 0 ? (
                   <NotificationSkeleton count={5} />
                 ) : error ? (
-                  <div className="text-center py-12">
-                    <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                      <X className="h-6 w-6 text-red-600" />
+                  <div className="text-center py-10">
+                    <div className="mx-auto h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                      <X className="h-5 w-5 text-red-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <h3 className="text-base font-medium text-gray-900 mb-1.5">
                       Failed to load notifications
                     </h3>
-                    <p className="text-gray-500 mb-4">{error}</p>
+                    <p className="text-gray-500 mb-3 text-sm">{error}</p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-3.5 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
                     >
                       Try Again
                     </button>
                   </div>
                 ) : filteredAlerts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Bell className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <div className="text-center py-10">
+                    <Bell className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1.5">
                       No notifications yet
                     </h3>
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 text-sm">
                       When you get notifications, they'll show up here.
                     </p>
                   </div>
@@ -349,49 +345,48 @@ const Alert: React.FC = () => {
                       {filteredAlerts.map((alert) => (
                         <div
                           key={alert._id}
-                          className={`bg-white rounded-xl border transition-all duration-200 hover:shadow-md group ${
-                            !alert.isRead
+                          className={`bg-white/70 backdrop-blur-sm rounded-xl border transition-all duration-200 hover:shadow-sm group ${!alert.isRead
                               ? "border-blue-200 bg-blue-50/30"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
+                              : "border-gray-200/50 hover:border-gray-300/50"
+                            }`}
                         >
-                          <div className="p-4">
+                          <div className="p-3.5">
                             <div className="flex items-start space-x-3">
                               {/* Avatar with notification icon */}
                               <div className="relative flex-shrink-0">
                                 <img
                                   src={alert.from.avatar}
                                   alt={alert.from.fullName}
-                                  className="w-10 h-10 rounded-full object-cover"
+                                  className="w-10 h-10 rounded-full object-cover border border-gray-200"
                                 />
-                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center border border-gray-200">
+                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center border border-gray-200">
                                   {getAlertIcon(alert.type)}
                                 </div>
                                 {!alert.isRead && (
-                                  <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                                  <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
                                 )}
                               </div>
-                              
+
                               {/* Content */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <div className="flex items-center space-x-2 mb-1">
-                                      <span className="font-semibold text-gray-900 text-sm">
+                                      <span className="font-medium text-gray-900 text-sm">
                                         {(alert.from.fullName || '').split(' ')[0]}
                                       </span>
                                       <span className="text-gray-400">·</span>
-                                      <span className="text-gray-500 text-sm">
+                                      <span className="text-gray-500 text-xs">
                                         {formatTimeAgo(alert.createdAt)}
                                       </span>
                                     </div>
-                                    <p className="text-gray-700 text-sm mb-3 leading-relaxed">
+                                    <p className="text-gray-700 text-sm mb-2.5 leading-relaxed">
                                       {alert.text}
                                     </p>
-                                    
+
                                     {/* Post preview */}
                                     {alert.post && (
-                                      <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                                      <div className="bg-gray-50/50 rounded-lg p-2.5 mb-2.5 border border-gray-200/30">
                                         <p className="text-gray-600 text-sm line-clamp-2">
                                           {alert.post.content}
                                         </p>
@@ -399,43 +394,41 @@ const Alert: React.FC = () => {
                                           <img
                                             src={alert.post.image}
                                             alt="Post attachment"
-                                            className="mt-2 w-16 h-16 rounded-lg object-cover"
+                                            className="mt-2 w-14 h-14 rounded-lg object-cover"
                                           />
                                         )}
                                       </div>
                                     )}
-                                    
+
                                     {/* Action buttons */}
                                     <div className="flex items-center space-x-2">
                                       <button
                                         onClick={() => markAsRead(alert._id)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                          alert.isRead
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${alert.isRead
                                             ? "bg-gray-100 text-gray-600"
                                             : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                        }`}
+                                          }`}
                                       >
                                         {alert.isRead ? "Read" : "Mark as read"}
                                       </button>
                                       {alert.type === "follow" && alert.from?._id && (
                                         <button
                                           onClick={() => handleFollowBack(alert.from._id)}
-                                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all shadow-sm ${
-                                            isFollowingUser(alert.from._id)
+                                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${isFollowingUser(alert.from._id)
                                               ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                               : "bg-green-600 text-white hover:bg-green-700"
-                                          }`}
+                                            }`}
                                         >
                                           {isFollowingUser(alert.from._id) ? "Following" : "Follow back"}
                                         </button>
                                       )}
                                     </div>
                                   </div>
-                                  
+
                                   {/* Action menu */}
-                                  <div className="flex items-center space-x-1 ml-3">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                                      <MoreHorizontal className="w-4 h-4" />
+                                  <div className="flex items-center space-x-1 ml-2">
+                                    <button className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm">
+                                      <MoreHorizontal className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 </div>
@@ -445,19 +438,19 @@ const Alert: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Loading more notifications */}
                     {isFetching && hasMore && (
-                      <div className="mt-6">
+                      <div className="mt-4">
                         <NotificationSkeleton count={3} />
                       </div>
                     )}
-                    
+
                     {/* End of notifications message */}
                     {!hasMore && notifications.length > 0 && (
-                      <div className="text-center py-8">
-                        <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-600">
-                          <Check className="w-4 h-4 mr-2" />
+                      <div className="text-center py-6">
+                        <div className="inline-flex items-center px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600">
+                          <Check className="w-3.5 h-3.5 mr-1.5" />
                           You're all caught up!
                         </div>
                       </div>
@@ -472,4 +465,5 @@ const Alert: React.FC = () => {
     </div>
   );
 };
+
 export default Alert;

@@ -91,13 +91,13 @@ export default function Friends() {
   const firstName = (name?: string, username?: string) => (name || username || "").split(" ")[0];
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-blue-50">
-      <Navigation activeTab="friends" setActiveTab={() => {}} darkMode={false} setDarkMode={() => {}} />
+    <div className="min-h-[100dvh] bg-gray-50">
+      <Navigation activeTab="friends" setActiveTab={() => { }} darkMode={false} setDarkMode={() => { }} />
 
       <div className="max-w-4xl mx-auto px-4 pt-6 pb-28">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-            <UsersIcon className="w-5 h-5" />
+          <div className="p-2 rounded-xl bg-white border border-gray-200">
+            <UsersIcon className="w-5 h-5 text-gray-800" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Find Friends</h1>
@@ -111,22 +111,29 @@ export default function Friends() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or @username"
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/70 border border-gray-200/50 focus:outline-none focus:ring-1 focus:ring-gray-400 backdrop-blur-sm"
           />
         </div>
 
         {/* Grid list */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {items.map((u) => (
-            <div key={u._id} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-4">
+            <div
+              key={u._id}
+              className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200/50 p-3.5 flex items-center gap-3.5 transition-all duration-200 hover:shadow-sm"
+            >
               <img
                 src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`}
                 alt={u.fullName}
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-11 h-11 rounded-full object-cover border border-gray-200"
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <a href={`/profile/${u.username}`} className="font-semibold text-gray-900 truncate max-w-[60vw] hover:underline" title={u.fullName}>
+                  <a
+                    href={`/profile/${u.username}`}
+                    className="font-medium text-gray-900 truncate max-w-[60vw] hover:text-gray-700 transition-colors"
+                    title={u.fullName}
+                  >
                     {firstName(u.fullName, u.username)}
                   </a>
                 </div>
@@ -136,16 +143,16 @@ export default function Friends() {
                 {isFollowing(u._id) ? (
                   <button
                     onClick={() => toggleFollow(u)}
-                    className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-white/50 transition-colors backdrop-blur-sm"
                   >
-                    <UserMinus className="w-4 h-4" /> Unfollow
+                    <UserMinus className="w-3.5 h-3.5" /> Unfollow
                   </button>
                 ) : (
                   <button
                     onClick={() => toggleFollow(u)}
-                    className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                   >
-                    <UserPlus className="w-4 h-4" /> Follow
+                    <UserPlus className="w-3.5 h-3.5" /> Follow
                   </button>
                 )}
               </div>
@@ -154,12 +161,12 @@ export default function Friends() {
         </div>
 
         {/* Loading / sentinel */}
-        <div ref={observerRef} className="h-10" />
+        <div ref={observerRef} className="h-8" />
         {loading && (
-          <div className="text-center text-gray-500 py-6">Loading...</div>
+          <div className="text-center text-gray-500 py-4 text-sm">Loading...</div>
         )}
         {!loading && items.length === 0 && (
-          <div className="text-center text-gray-500 py-10">No users found.</div>
+          <div className="text-center text-gray-500 py-8 text-sm">No users found.</div>
         )}
       </div>
     </div>
