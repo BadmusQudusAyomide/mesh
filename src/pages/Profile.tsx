@@ -1085,7 +1085,7 @@ function Profile() {
                     className={`px-6 py-2 rounded-xl font-medium transition-all w-full sm:w-auto ${
                       isFollowing
                         ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                        : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
+                        : 'bg-black text-white hover:bg-gray-800 shadow-lg'
                     }`}
                   >
                     {isFollowing ? 'Following' : 'Follow'}

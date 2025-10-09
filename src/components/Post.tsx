@@ -237,7 +237,7 @@ const Post = ({
                   {onFollow && userId && userId !== post.authorId && !isFollowing && (
                     <button
                       onClick={() => onFollow(post.authorId)}
-                      className="ml-3 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+                      className="ml-3 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 bg-black text-white hover:bg-gray-800"
                     >
                       <UserPlusIcon className="w-4 h-4" />
                       Follow
@@ -561,7 +561,7 @@ const Post = ({
                           {/* Example: show Follow if not following this commenter (logic to be implemented) */}
                           {onFollow && (
                             <button
-                              className="ml-1 px-2 py-0.5 bg-blue-500 text-white rounded-full text-xs flex items-center gap-1 hover:bg-blue-600 transition-all"
+                              className="ml-1 px-2 py-0.5 bg-black text-white rounded-full text-xs flex items-center gap-1 hover:bg-gray-800 transition-all"
                               onClick={() => onFollow(comment.user.id)}
                             >
                               <UserPlusIcon className="w-4 h-4" /> Follow
