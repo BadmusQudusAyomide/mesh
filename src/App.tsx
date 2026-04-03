@@ -21,6 +21,7 @@ import SuccessPage from "./pages/SuccessPage";
 import ConnectionTest from "./pages/ConnectionTest";
 import Follow from "./pages/Follow";
 import SearchPage from "./pages/SearchPage";
+import PostDetails from "./pages/PostDetails";
 import "./App.css";
 
 function App() {
@@ -121,6 +122,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SearchPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/post/:postId"
+                element={
+                  <ProtectedRoute>
+                    <PostDetails />
                   </ProtectedRoute>
                 }
               />

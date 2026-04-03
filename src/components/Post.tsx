@@ -18,6 +18,7 @@ import {
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
 import { formatRelativeTime } from "../lib/utils";
+import { useToast } from "./ui/toast";
 
 interface Post {
   id: string;
@@ -77,6 +78,7 @@ const Post = ({
   onFollow,
   onDelete,
 }: PostProps) => {
+  const { addToast } = useToast();
   // Remove mock comments state
   // const [comments, setComments] = useState([...]);
   const [showComments, setShowComments] = useState(false);
@@ -131,10 +133,18 @@ const Post = ({
         try {
           const url = getPostShareUrl();
           await navigator.clipboard.writeText(url);
-          // Optionally, replace with your toast system
-          alert("Post link copied to clipboard");
+          addToast({
+            type: "success",
+            title: "Link copied",
+            message: "This post link is ready to share.",
+          });
         } catch (e) {
           console.error("Failed to copy link", e);
+          addToast({
+            type: "error",
+            title: "Copy failed",
+            message: "We couldn't copy the post link right now.",
+          });
         }
       },
     },
@@ -162,7 +172,7 @@ const Post = ({
           danger: true,
         }]
       : []),
-  ], [isFollowing, onFollow, userId, post.authorId, onDelete, post.id]);
+  ], [addToast, isFollowing, onFollow, userId, post.authorId, onDelete, post.id]);
 
   // Add submit handler for comment
   const handleCommentSubmit = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -173,13 +183,13 @@ const Post = ({
     }
   };
 
-  // Build a shareable URL to this post. Uses current path with a post anchor
+  // Build a stable shareable URL to a dedicated post permalink page.
   const getPostShareUrl = () => {
     try {
-      const { origin, pathname } = window.location;
-      return `${origin}${pathname}#post-${post.id}`;
+      const { origin } = window.location;
+      return `${origin}/post/${post.id}`;
     } catch {
-      return `#post-${post.id}`;
+      return `/post/${post.id}`;
     }
   };
 
@@ -193,15 +203,32 @@ const Post = ({
     try {
       if (navigator.share) {
         await navigator.share(shareData as ShareData);
+        addToast({
+          type: "success",
+          title: "Shared",
+          message: "Your post link was shared successfully.",
+        });
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(shareData.url);
-        alert("Post link copied to clipboard");
+        addToast({
+          type: "success",
+          title: "Link copied",
+          message: "This post link is ready to share.",
+        });
       } else {
         // Last resort
         prompt("Copy this link:", shareData.url);
       }
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        return;
+      }
       console.error("Share failed", e);
+      addToast({
+        type: "error",
+        title: "Share failed",
+        message: "We couldn't share this post right now.",
+      });
     }
   };
 

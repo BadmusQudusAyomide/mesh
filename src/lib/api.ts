@@ -246,6 +246,10 @@ class ApiService {
     return this.request<{ posts: any[] }>(`/posts/user/${username}`, { method: "GET" });
   }
 
+  async getPostById(postId: string): Promise<{ post: Post }> {
+    return this.request<{ post: Post }>(`/posts/${postId}`, { method: "GET" });
+  }
+
   // Get user posts with pagination for infinite scroll
   async getPostsByUsernamePaginated(username: string, page: number = 1, limit: number = 5): Promise<{ 
     posts: any[]; 
