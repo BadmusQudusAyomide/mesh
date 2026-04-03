@@ -176,6 +176,7 @@ interface EditProfileProps {
   user: User;
   onClose: () => void;
   onSave: (data: {
+    username: string;
     fullName: string;
     bio: string;
     website: string;
@@ -203,6 +204,7 @@ interface EditProfileProps {
 }
 
 function EditProfile({ user, onClose, onSave }: EditProfileProps) {
+  const [username, setUsername] = useState(user.username || "");
   const [fullName, setFullName] = useState(user.fullName || "");
   const [bio, setBio] = useState(user.bio || "");
   const [website, setWebsite] = useState(user.website || "");
@@ -232,6 +234,13 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
   const [currentCity, setCurrentCity] = useState(user.currentCity || "");
   const [phone, setPhone] = useState(user.phone || "");
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken" | "invalid" | "current"
+  >("idle");
+  const isUsernameBlocked =
+    usernameStatus === "taken" ||
+    usernameStatus === "invalid" ||
+    usernameStatus === "checking";
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -271,6 +280,7 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
     setLoading(true);
     try {
       await onSave({
+        username,
         fullName,
         bio,
         website,
@@ -293,6 +303,41 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const candidate = username.trim().toLowerCase();
+    if (!candidate) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    if (candidate === user.username) {
+      setUsernameStatus("current");
+      return;
+    }
+    if (candidate.length < 3 || candidate.length > 30 || !/^[a-z0-9._]+$/.test(candidate)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    setUsernameStatus("checking");
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await apiService.checkUsernameAvailability(candidate);
+        if (candidate !== username.trim().toLowerCase()) return;
+        if (res.available) {
+          setUsernameStatus(res.reason === "current" ? "current" : "available");
+        } else {
+          setUsernameStatus("taken");
+        }
+      } catch {
+        if (candidate === username.trim().toLowerCase()) {
+          setUsernameStatus("idle");
+        }
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [username, user.username]);
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
@@ -354,6 +399,48 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
           </div>
         </div>
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Username
+            </label>
+            <div className="mt-1 flex items-center rounded-lg border px-3 py-2">
+              <span className="text-gray-400">@</span>
+              <input
+                type="text"
+                className="ml-2 w-full border-0 p-0 focus:outline-none"
+                value={username}
+                minLength={3}
+                maxLength={30}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/^@/, "");
+                  const cleaned = raw.toLowerCase().replace(/[^a-z0-9._]/g, "");
+                  setUsername(cleaned);
+                }}
+                placeholder="yourname"
+                required
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              3-30 characters. Letters, numbers, dots, and underscores only.
+            </p>
+            {usernameStatus === "checking" && (
+              <p className="mt-1 text-xs text-gray-500">Checking availability…</p>
+            )}
+            {usernameStatus === "available" && (
+              <p className="mt-1 text-xs text-green-600">Username is available.</p>
+            )}
+            {usernameStatus === "taken" && (
+              <p className="mt-1 text-xs text-red-600">This username is taken.</p>
+            )}
+            {usernameStatus === "invalid" && (
+              <p className="mt-1 text-xs text-red-600">
+                Username must be 3–30 characters and use letters, numbers, dots, or underscores.
+              </p>
+            )}
+            {usernameStatus === "current" && (
+              <p className="mt-1 text-xs text-gray-500">This is your current username.</p>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Full Name
@@ -508,8 +595,12 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
         </div>
         <button
           type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-xl font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transition-all"
+          disabled={loading || isUsernameBlocked}
+          className={`w-full py-3 rounded-xl font-medium transition-all ${
+            loading || isUsernameBlocked
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg"
+          }`}
         >
           {loading ? "Saving..." : "Save Changes"}
         </button>
@@ -1305,6 +1396,9 @@ function Profile() {
             // Also update auth context if this is the current user
             if (currentUser && profileUser && currentUser._id === profileUser._id && updateUser) {
               updateUser({ ...currentUser, ...updated });
+            }
+            if (updated.username && profileUser?.username && updated.username !== profileUser.username) {
+              navigate(`/profile/${updated.username}`);
             }
           }}
         />

@@ -179,6 +179,13 @@ class ApiService {
     });
   }
 
+  async checkUsernameAvailability(username: string): Promise<{ available: boolean; reason?: string }> {
+    const query = encodeURIComponent(username);
+    return this.request<{ available: boolean; reason?: string }>(`/auth/username-available?username=${query}`, {
+      method: 'GET',
+    });
+  }
+
   async followUser(userId: string): Promise<{ message: string; isFollowing: boolean }> {
     return this.request<{ message: string; isFollowing: boolean }>(`/users/${userId}/follow`, {
       method: 'POST',
