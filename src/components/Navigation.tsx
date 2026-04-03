@@ -10,14 +10,21 @@ import {
   Moon,
   LogOut,
   Download,
+  FileText,
+  PlayCircle,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContextHelpers";
 import { useToast } from "../components/ui/toast";
 import { useNotifications } from "../contexts/NotificationContextHelpers";
 import { apiService } from "../lib/api";
 import { useInstall } from "../contexts/InstallContext";
+import type {
+  SearchPostResult,
+  SearchStoryResult,
+  SearchUserResult,
+} from "../types";
 
 interface NavigationProps {
   activeTab: string;
@@ -33,12 +40,20 @@ const Navigation = ({
   hideBottomBar,
 }: NavigationProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { addToast } = useToast();
   const { unreadCount } = useNotifications();
   const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const { canInstall, isStandalone, isIOS, promptInstall } = useInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchUsers, setSearchUsers] = useState<SearchUserResult[]>([]);
+  const [searchPosts, setSearchPosts] = useState<SearchPostResult[]>([]);
+  const [searchStories, setSearchStories] = useState<SearchStoryResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef<HTMLFormElement | null>(null);
 
   // Fetch unread messages count periodically
   useEffect(() => {
@@ -82,6 +97,69 @@ const Navigation = ({
       });
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchQuery(location.pathname === "/search" ? params.get("query") || "" : "");
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchUsers([]);
+      setSearchPosts([]);
+      setSearchStories([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    const id = window.setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const res = await apiService.searchAll(q, 4);
+        setSearchUsers(res.users || []);
+        setSearchPosts(res.posts || []);
+        setSearchStories(res.stories || []);
+      } catch (error) {
+        console.error("Live search failed:", error);
+        setSearchUsers([]);
+        setSearchPosts([]);
+        setSearchStories([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 220);
+
+    return () => window.clearTimeout(id);
+  }, [searchQuery]);
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    setShowSearchDropdown(false);
+    navigate(query ? `/search?query=${encodeURIComponent(query)}&tab=all` : "/search");
+  };
+
+  const openSearchResult = (path: string) => {
+    setShowSearchDropdown(false);
+    navigate(path);
+  };
+
+  const dropdownCount =
+    searchUsers.length + searchPosts.length + searchStories.length;
 
   return (
     <>
@@ -165,14 +243,127 @@ const Navigation = ({
                 <Download className="w-4.5 h-4.5" />
               </button>
             )}
-            <div className="relative">
+            <form className="relative" onSubmit={submitSearch} ref={searchRef}>
               <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
-                type="text"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchDropdown(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) setShowSearchDropdown(true);
+                }}
                 placeholder="Search Mesh..."
                 className="pl-8 pr-3 py-1.5 bg-white/50 border border-gray-200/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-transparent text-xs placeholder-gray-500 backdrop-blur-sm"
               />
-            </div>
+              {showSearchDropdown && searchQuery.trim() && (
+                <div className="absolute top-full mt-2 right-0 w-[380px] max-h-[70vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-xl shadow-xl p-2">
+                  {searchLoading ? (
+                    <div className="px-3 py-4 text-sm text-gray-500">Searching...</div>
+                  ) : dropdownCount === 0 ? (
+                    <div className="px-3 py-4 text-sm text-gray-500">
+                      No quick results found.
+                    </div>
+                  ) : (
+                    <>
+                      {searchUsers.length > 0 && (
+                        <div className="mb-2">
+                          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                            People
+                          </div>
+                          {searchUsers.map((person) => (
+                            <button
+                              key={person._id}
+                              type="button"
+                              onClick={() => openSearchResult(`/profile/${person.username}`)}
+                              className="w-full text-left flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50"
+                            >
+                              <img
+                                src={person.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${person.username}`}
+                                alt={person.fullName}
+                                className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {person.fullName}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  @{person.username}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {searchPosts.length > 0 && (
+                        <div className="mb-2">
+                          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5" />
+                            Posts
+                          </div>
+                          {searchPosts.map((post) => (
+                            <button
+                              key={post._id}
+                              type="button"
+                              onClick={() => openSearchResult(`/profile/${post.user.username}`)}
+                              className="w-full text-left px-2 py-2 rounded-xl hover:bg-gray-50"
+                            >
+                              <div className="text-sm text-gray-900 line-clamp-2">
+                                {post.content}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {post.user.fullName}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {searchStories.length > 0 && (
+                        <div className="mb-2">
+                          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-1">
+                            <PlayCircle className="w-3.5 h-3.5" />
+                            Stories
+                          </div>
+                          {searchStories.map((story) => (
+                            <button
+                              key={story._id}
+                              type="button"
+                              onClick={() => openSearchResult("/home")}
+                              className="w-full text-left flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50"
+                            >
+                              <img
+                                src={story.mediaUrl}
+                                alt={story.caption || "Story"}
+                                className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-sm text-gray-900 truncate">
+                                  {story.caption || `${story.user.fullName}'s story`}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {story.user.fullName}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+                      >
+                        View all results
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </form>
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-1.5 rounded-lg text-gray-600 hover:bg-white/50 transition-colors"
@@ -231,6 +422,18 @@ const Navigation = ({
                 >
                   <Home className="w-5 h-5 mb-0.5" />
                   <span className="text-[10px] font-medium">Home</span>
+                </Link>
+
+                <Link
+                  to="/search"
+                  className={`flex flex-col items-center px-2 py-1.5 rounded-xl transition-colors ${
+                    location.pathname === "/search"
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-600 hover:bg-white/70"
+                  }`}
+                >
+                  <Search className="w-5 h-5 mb-0.5" />
+                  <span className="text-[10px] font-medium">Search</span>
                 </Link>
 
                 <Link

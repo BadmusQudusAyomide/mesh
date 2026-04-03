@@ -44,6 +44,7 @@ interface Conversation {
     sender: string;
   };
   unreadCount: number;
+  isTyping?: boolean;
 }
 
 function Inbox() {
@@ -68,6 +69,26 @@ function Inbox() {
   const [loadingMutualFollowers, setLoadingMutualFollowers] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterType, setFilterType] = useState("all");
+  const typingTimeoutsRef = useRef<Map<string, number>>(new Map());
+  const TypingDots = () => (
+    <span className="inline-flex items-center gap-1 text-green-600">
+      <span className="italic">typing</span>
+      <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+          style={{ animationDelay: "0ms" }}
+        />
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+          style={{ animationDelay: "150ms" }}
+        />
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+          style={{ animationDelay: "300ms" }}
+        />
+      </span>
+    </span>
+  );
 
   // Setup Socket.IO for real-time conversation updates
   useEffect(() => {
@@ -125,6 +146,7 @@ function Inbox() {
             ...conv,
             lastMessage: updatedLast,
             unreadCount: (conv.unreadCount || 0) + inc,
+            isTyping: false,
           };
           // move updated conversation to top
           const [moved] = copy.splice(idx, 1);
@@ -145,6 +167,7 @@ function Inbox() {
           },
           lastMessage: updatedLast,
           unreadCount: isIncoming ? 1 : 0,
+          isTyping: false,
         };
         return [newConv, ...prev];
       });
@@ -163,13 +186,53 @@ function Inbox() {
       upsertConversationFromMessage(msg);
     };
     const handleMessageSent = (msg: any) => handleNewMessage(msg);
+    const handleTyping = ({
+      senderId,
+      recipientId,
+    }: {
+      senderId?: string;
+      recipientId?: string;
+    }) => {
+      if (!senderId || !recipientId) return;
+      if (String(recipientId) !== String(currentUser._id)) return;
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          String(conversation.user._id) === String(senderId)
+            ? { ...conversation, isTyping: true }
+            : conversation
+        )
+      );
+
+      const existingTimeout = typingTimeoutsRef.current.get(String(senderId));
+      if (existingTimeout) window.clearTimeout(existingTimeout);
+
+      const timeoutId = window.setTimeout(() => {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            String(conversation.user._id) === String(senderId)
+              ? { ...conversation, isTyping: false }
+              : conversation
+          )
+        );
+        typingTimeoutsRef.current.delete(String(senderId));
+      }, 2200);
+
+      typingTimeoutsRef.current.set(String(senderId), timeoutId);
+    };
 
     socket.on("newMessage", handleNewMessage);
     socket.on("messageSent", handleMessageSent);
+    socket.on("typing", handleTyping);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messageSent", handleMessageSent);
+      socket.off("typing", handleTyping);
+      typingTimeoutsRef.current.forEach((timeoutId) =>
+        window.clearTimeout(timeoutId)
+      );
+      typingTimeoutsRef.current.clear();
       socket.disconnect();
       socketRef.current = null;
     };
@@ -582,42 +645,50 @@ function Inbox() {
                             {conversation.lastMessage && (
                               <div className="flex items-start justify-between gap-2 w-full overflow-hidden">
                                 <div className="text-gray-600 text-sm truncate group-hover:text-gray-700 transition-colors flex-1 mr-2 min-w-0 max-w-full flex items-center gap-1 overflow-hidden">
-                                  <span className="shrink-0">
-                                    {conversation.lastMessage.sender ===
-                                      currentUser?._id
-                                      ? "You: "
-                                      : ""}
-                                  </span>
-                                  {conversation.lastMessage?.messageType ===
-                                    "image" && (
-                                      <span className="inline-flex items-center gap-1 shrink-0">
-                                        <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                                        <span>Photo</span>
+                                  {conversation.isTyping ? (
+                                    <span className="truncate block max-w-full">
+                                      <TypingDots />
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <span className="shrink-0">
+                                        {conversation.lastMessage.sender ===
+                                          currentUser?._id
+                                          ? "You: "
+                                          : ""}
                                       </span>
-                                    )}
-                                  {conversation.lastMessage?.messageType ===
-                                    "audio" && (
-                                      <span className="inline-flex items-center gap-1 shrink-0">
-                                        <Mic className="w-3.5 h-3.5 text-purple-500" />
-                                        <span>Voice note</span>
-                                      </span>
-                                    )}
-                                  {conversation.lastMessage?.messageType ===
-                                    "video" && (
-                                      <span className="inline-flex items-center gap-1 shrink-0">
-                                        <VideoIcon className="w-3.5 h-3.5 text-red-500" />
-                                        <span>Video</span>
-                                      </span>
-                                    )}
-                                  {!["image", "audio", "video"].includes(
-                                    conversation.lastMessage?.messageType
-                                  ) && (
-                                      <span className="truncate block max-w-full">
-                                        {truncatePreview(
-                                          conversation.lastMessage.content
+                                      {conversation.lastMessage?.messageType ===
+                                        "image" && (
+                                          <span className="inline-flex items-center gap-1 shrink-0">
+                                            <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                                            <span>Photo</span>
+                                          </span>
                                         )}
-                                      </span>
-                                    )}
+                                      {conversation.lastMessage?.messageType ===
+                                        "audio" && (
+                                          <span className="inline-flex items-center gap-1 shrink-0">
+                                            <Mic className="w-3.5 h-3.5 text-purple-500" />
+                                            <span>Voice note</span>
+                                          </span>
+                                        )}
+                                      {conversation.lastMessage?.messageType ===
+                                        "video" && (
+                                          <span className="inline-flex items-center gap-1 shrink-0">
+                                            <VideoIcon className="w-3.5 h-3.5 text-red-500" />
+                                            <span>Video</span>
+                                          </span>
+                                        )}
+                                      {!["image", "audio", "video"].includes(
+                                        conversation.lastMessage?.messageType
+                                      ) && (
+                                        <span className="truncate block max-w-full">
+                                          {truncatePreview(
+                                            conversation.lastMessage.content
+                                          )}
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
                                 <div className="flex flex-col items-end flex-shrink-0 w-14 sm:w-16 ml-2 whitespace-nowrap">
                                   <span className="text-[10px] sm:text-xs text-gray-500 leading-none">

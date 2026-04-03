@@ -7,7 +7,11 @@ import type {
   ProfileUpdateResponse, 
   LogoutResponse, 
   Notification, 
-  Post 
+  Post,
+  StoryGroup,
+  SearchUserResult,
+  SearchPostResult,
+  SearchStoryResult
 } from '../types';
 import { API_BASE_URL } from '../config';
 
@@ -139,6 +143,20 @@ class ApiService {
     return this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/auth/reset-password/${token}`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
     });
   }
 
@@ -297,6 +315,37 @@ class ApiService {
         limit: number;
       }
     }>(`/posts/notifications?page=${page}&limit=${limit}`, { method: "GET" });
+  }
+
+  async getStories(): Promise<{ stories: StoryGroup[] }> {
+    return this.request<{ stories: StoryGroup[] }>('/posts/stories', {
+      method: 'GET',
+    });
+  }
+
+  async createStory(data: {
+    mediaUrl: string;
+    mediaType: 'image' | 'video';
+    caption?: string;
+  }): Promise<{ story: StoryGroup }> {
+    return this.request<{ story: StoryGroup }>('/posts/stories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markStoryViewed(storyId: string): Promise<{
+    storyId: string;
+    viewCount: number;
+    isViewed: boolean;
+  }> {
+    return this.request<{
+      storyId: string;
+      viewCount: number;
+      isViewed: boolean;
+    }>(`/posts/stories/${storyId}/view`, {
+      method: 'POST',
+    });
   }
 
   // Message endpoints
@@ -473,6 +522,21 @@ class ApiService {
     const limit = params.limit ?? 10;
     const queryStr = `query=${q}&page=${page}&limit=${limit}`;
     return this.request<{ users: User[]; page: number; totalPages: number; total: number; hasMore: boolean }>(`/auth/users?${queryStr}`, { method: 'GET' });
+  }
+
+  async searchAll(query: string, limit: number = 8): Promise<{
+    query: string;
+    users: SearchUserResult[];
+    posts: SearchPostResult[];
+    stories: SearchStoryResult[];
+  }> {
+    const q = encodeURIComponent(query);
+    return this.request<{
+      query: string;
+      users: SearchUserResult[];
+      posts: SearchPostResult[];
+      stories: SearchStoryResult[];
+    }>(`/auth/search?query=${q}&limit=${limit}`, { method: 'GET' });
   }
 }
 

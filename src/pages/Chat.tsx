@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContextHelpers";
 import { apiService } from "../lib/api";
 import { API_BASE_URL } from "../config";
 import socketIOClient from "socket.io-client";
+import { formatRelativeTime } from "../lib/utils";
 // Add message virtualization for large conversations
 // Virtualize search results list to keep main view unchanged and avoid complex variable heights
 import { FixedSizeList as List } from "react-window";
@@ -2040,7 +2041,7 @@ function Chat() {
                         onClick={() => data.onJump(msg._id)}
                       >
                         <div className="text-xs text-gray-500 truncate">
-                          {new Date(msg.createdAt).toLocaleString()}
+                          {formatRelativeTime(msg.createdAt)}
                         </div>
                         <div className="text-sm text-gray-900 truncate">
                           {renderHighlighted(msg.content, data.query)}

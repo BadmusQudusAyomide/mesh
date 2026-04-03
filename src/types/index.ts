@@ -147,3 +147,70 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface StoryItem {
+  _id: string;
+  mediaUrl: string;
+  mediaType: "image" | "video";
+  caption: string;
+  createdAt: string;
+  expiresAt: string;
+  viewCount: number;
+  isViewed: boolean;
+}
+
+export interface StoryGroup {
+  user: {
+    _id: string;
+    username: string;
+    fullName: string;
+    avatar: string;
+    isVerified: boolean;
+  };
+  stories: StoryItem[];
+  latestCreatedAt: string;
+  hasUnviewed: boolean;
+}
+
+export interface SearchUserResult {
+  _id: string;
+  username: string;
+  fullName: string;
+  avatar: string;
+  isVerified: boolean;
+  bio: string;
+  followerCount: number;
+  createdAt: string;
+}
+
+export interface SearchPostResult {
+  _id: string;
+  content: string;
+  image?: string;
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  user: {
+    _id: string;
+    username: string;
+    fullName: string;
+    avatar: string;
+    isVerified: boolean;
+  };
+}
+
+export interface SearchStoryResult {
+  _id: string;
+  caption: string;
+  mediaUrl: string;
+  mediaType: "image" | "video";
+  createdAt: string;
+  expiresAt: string;
+  user: {
+    _id: string;
+    username: string;
+    fullName: string;
+    avatar: string;
+    isVerified: boolean;
+  };
+}

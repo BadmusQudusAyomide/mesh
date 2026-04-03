@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { io as socketIOClient, Socket } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import SidebarLeft from "../components/SidebarLeft";
 import SidebarRight from "../components/SidebarRight";
@@ -12,7 +13,8 @@ import { useAuth } from "../contexts/AuthContextHelpers";
 import "../App.css";
 import { apiService } from "../lib/api";
 import { API_BASE_URL } from "../config";
-import type { Post as BackendPost, FeedPost } from "../types";
+import type { Post as BackendPost, FeedPost, StoryGroup } from "../types";
+import { formatRelativeTime } from "../lib/utils";
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
@@ -51,8 +53,6 @@ const trendingTopics = [
   { tag: "#Innovation", posts: "742K", growth: "+6%" },
   { tag: "#FutureOfWork", posts: "623K", growth: "+9%" },
 ];
-
-// Stories feature not implemented yet: show placeholder in component
 
 // Who to follow (loaded from backend mutual followers)
 type WhoToFollowItem = {
@@ -128,9 +128,64 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${import.meta.env
 const UPLOAD_PRESET =
   import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "mesh_unsigned";
 
+function mergeStoryGroups(
+  existing: StoryGroup[],
+  incoming: StoryGroup,
+  currentUserId?: string
+) {
+  const existingIndex = existing.findIndex(
+    (group) => group.user._id === incoming.user._id
+  );
+
+  let next = [...existing];
+  if (existingIndex === -1) {
+    next.unshift(incoming);
+  } else {
+    const currentGroup = next[existingIndex];
+    const storiesMap = new Map(
+      currentGroup.stories.map((story) => [story._id, story])
+    );
+    for (const story of incoming.stories) {
+      storiesMap.set(story._id, story);
+    }
+    const mergedStories = Array.from(storiesMap.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    next[existingIndex] = {
+      ...currentGroup,
+      ...incoming,
+      stories: mergedStories,
+      latestCreatedAt:
+        new Date(currentGroup.latestCreatedAt) > new Date(incoming.latestCreatedAt)
+          ? currentGroup.latestCreatedAt
+          : incoming.latestCreatedAt,
+      hasUnviewed:
+        currentGroup.hasUnviewed ||
+        incoming.hasUnviewed ||
+        (incoming.user._id !== currentUserId &&
+          incoming.stories.some((story) => !story.isViewed)),
+    };
+    const [moved] = next.splice(existingIndex, 1);
+    next.unshift(moved);
+  }
+
+  return next.sort((a, b) => {
+    const aOwn = a.user._id === currentUserId;
+    const bOwn = b.user._id === currentUserId;
+    if (aOwn && !bOwn) return -1;
+    if (!aOwn && bOwn) return 1;
+    if (a.hasUnviewed !== b.hasUnviewed) return a.hasUnviewed ? -1 : 1;
+    return (
+      new Date(b.latestCreatedAt).getTime() - new Date(a.latestCreatedAt).getTime()
+    );
+  });
+}
+
 function Home() {
+  const navigate = useNavigate();
   // 2. Type posts as Post[]
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [stories, setStories] = useState<StoryGroup[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -139,12 +194,14 @@ function Home() {
   const [previewImage, setPreviewImage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [showCreatePost, setShowCreatePost] = useState(false);
+  const [isCreatingStory, setIsCreatingStory] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentInputs, setCommentInputs] = useState<{
     [postId: string]: string;
   }>({});
+  const [headerSearchQuery, setHeaderSearchQuery] = useState("");
   const [whoToFollow, setWhoToFollow] = useState<WhoToFollowItem[]>([]);
   // 3. Get user from useAuth
   const { user, updateUser } = useAuth();
@@ -165,7 +222,7 @@ function Home() {
               post.user?.avatar ||
               "https://randomuser.me/api/portraits/men/1.jpg",
             content: post.content,
-            time: new Date(post.createdAt).toLocaleString(),
+            time: formatRelativeTime(post.createdAt),
             image: post.image,
             likes: post.likes.length,
             comments: post.comments.length,
@@ -192,7 +249,17 @@ function Home() {
       }
     };
 
+    const fetchStories = async () => {
+      try {
+        const res = await apiService.getStories();
+        setStories(res.stories || []);
+      } catch (e) {
+        console.error("Failed to load stories:", e);
+      }
+    };
+
     fetchInitialPosts();
+    fetchStories();
 
     // Socket.IO real-time updates
     const socket: Socket = socketIOClient(SOCKET_URL);
@@ -215,6 +282,9 @@ function Home() {
     });
     socket.on("postDeleted", ({ postId }: { postId: string }) => {
       setPosts((prev) => prev.filter((p) => p.id !== postId));
+    });
+    socket.on("storyCreated", (group: StoryGroup) => {
+      setStories((prev) => mergeStoryGroups(prev, group, user?._id));
     });
     return () => {
       socket.disconnect();
@@ -262,7 +332,7 @@ function Home() {
             post.user?.avatar ||
             "https://randomuser.me/api/portraits/men/1.jpg",
           content: post.content,
-          time: new Date(post.createdAt).toLocaleString(),
+          time: formatRelativeTime(post.createdAt),
           image: post.image,
           likes: post.likes.length,
           comments: post.comments.length,
@@ -414,7 +484,7 @@ function Home() {
               post.user?.avatar ||
               "https://randomuser.me/api/portraits/men/1.jpg",
             content: post.content,
-            time: new Date(post.createdAt).toLocaleString(),
+            time: formatRelativeTime(post.createdAt),
             image: post.image,
             likes: post.likes.length,
             comments: post.comments.length,
@@ -512,10 +582,82 @@ function Home() {
     );
   };
 
+  const handleCreateStory = async (
+    file: File,
+    caption: string,
+    mediaType: "image" | "video"
+  ) => {
+    if (!user) return;
+    setIsCreatingStory(true);
+    try {
+      const resourceType = mediaType === "video" ? "video" : "image";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
+
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${
+        import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+      }/${resourceType}/upload`;
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok || !uploadData.secure_url) {
+        throw new Error(uploadData?.error?.message || "Story upload failed");
+      }
+
+      const res = await apiService.createStory({
+        mediaUrl: uploadData.secure_url,
+        mediaType,
+        caption,
+      });
+
+      setStories((prev) => mergeStoryGroups(prev, res.story, user._id));
+    } catch (error) {
+      console.error("Failed to create story:", error);
+      alert("Failed to create story");
+      throw error;
+    } finally {
+      setIsCreatingStory(false);
+    }
+  };
+
+  const handleStoryViewed = async (storyId: string) => {
+    try {
+      await apiService.markStoryViewed(storyId);
+      setStories((prev) =>
+        prev.map((group) => {
+          const updatedStories = group.stories.map((story) =>
+            story._id === storyId ? { ...story, isViewed: true } : story
+          );
+          return {
+            ...group,
+            stories: updatedStories,
+            hasUnviewed:
+              group.user._id === user?._id
+                ? false
+                : updatedStories.some((story) => !story.isViewed),
+          };
+        })
+      );
+    } catch (error) {
+      console.error("Failed to mark story as viewed:", error);
+    }
+  };
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toString();
+  };
+
+  const submitHeaderSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = headerSearchQuery.trim();
+    navigate(query ? `/search?query=${encodeURIComponent(query)}&tab=all` : "/search");
   };
 
   return (
@@ -545,7 +687,10 @@ function Home() {
 
           <div className="flex items-center space-x-3">
             {/* Search Bar */}
-            <div className="relative hidden md:flex items-center bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200/50 px-4 py-2 min-w-[300px] transition-all duration-200 hover:shadow">
+            <form
+              onSubmit={submitHeaderSearch}
+              className="relative hidden md:flex items-center bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200/50 px-4 py-2 min-w-[300px] transition-all duration-200 hover:shadow"
+            >
               <svg
                 className="w-5 h-5 mr-3 text-gray-400"
                 fill="none"
@@ -560,11 +705,13 @@ function Home() {
                 />
               </svg>
               <input
-                type="text"
+                type="search"
+                value={headerSearchQuery}
+                onChange={(e) => setHeaderSearchQuery(e.target.value)}
                 placeholder="Search Mesh..."
                 className="bg-transparent outline-none flex-1 text-gray-900 placeholder-gray-500"
               />
-            </div>
+            </form>
 
             {/* Action Buttons */}
             <button className="p-3 rounded-2xl transition-all duration-200 hover:scale-105 bg-white/50 hover:bg-white/80 text-gray-600 backdrop-blur-sm border border-gray-200/50">
@@ -634,20 +781,22 @@ function Home() {
               </div>
             </div>
 
-            {/* Stories Section */}
-            <div className="rounded-2xl p-1 bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">
-              <Stories
-                currentUser={
-                  user
-                    ? {
+            <Stories
+              currentUser={
+                user
+                  ? {
+                      _id: user._id,
                       name: user.fullName,
+                      username: user.username,
                       avatar: user.avatar,
                     }
-                    : undefined
-                }
-                onCreatePost={() => setShowCreatePost(true)}
-              />
-            </div>
+                  : undefined
+              }
+              stories={stories}
+              onCreateStory={handleCreateStory}
+              onStoryViewed={handleStoryViewed}
+              isCreating={isCreatingStory}
+            />
 
             {/* Quick Actions */}
             <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">

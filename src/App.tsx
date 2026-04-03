@@ -9,6 +9,8 @@ import Alert from "./pages/Alert";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/ui/toast";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -18,6 +20,7 @@ import PublicRoute from "./components/PublicRoute";
 import SuccessPage from "./pages/SuccessPage";
 import ConnectionTest from "./pages/ConnectionTest";
 import Follow from "./pages/Follow";
+import SearchPage from "./pages/SearchPage";
 import "./App.css";
 
 function App() {
@@ -45,6 +48,22 @@ function App() {
                 element={
                   <PublicRoute>
                     <Signup />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicRoute>
+                    <ForgotPassword />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <PublicRoute>
+                    <ResetPassword />
                   </PublicRoute>
                 }
               />
@@ -94,6 +113,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Friends />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <ProtectedRoute>
+                    <SearchPage />
                   </ProtectedRoute>
                 }
               />

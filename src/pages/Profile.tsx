@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { io as socketIOClient, Socket } from "socket.io-client";
 import PostsFeed from "../components/PostsFeed";
+import { formatRelativeTime } from "../lib/utils";
 
 // Removed unused default cover image (we now show only gradient when no cover)
 
@@ -160,7 +161,7 @@ const Post = ({
               </Link>
               <p className="text-gray-700 text-sm mb-0.5">{comment.text}</p>
               <span className="text-xs text-gray-400">
-                {new Date(comment.createdAt).toLocaleString()}
+                {formatRelativeTime(comment.createdAt)}
               </span>
             </div>
           </div>
@@ -580,7 +581,7 @@ function Profile() {
         username: post.user.username,
         avatar: post.user.avatar,
         content: post.content,
-        time: new Date(post.createdAt).toLocaleString(),
+        time: formatRelativeTime(post.createdAt),
         image: post.image,
         likes: post.likes.length,
         comments: post.comments.length,
@@ -628,7 +629,7 @@ function Profile() {
         username: post.user.username,
         avatar: post.user.avatar,
         content: post.content,
-        time: new Date(post.createdAt).toLocaleString(),
+        time: formatRelativeTime(post.createdAt),
         image: post.image,
         likes: post.likes.length,
         comments: post.comments.length,

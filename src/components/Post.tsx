@@ -17,6 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
+import { formatRelativeTime } from "../lib/utils";
 
 interface Post {
   id: string;
@@ -395,7 +396,7 @@ const Post = ({
             </div>
             <div className="flex items-center gap-4 mt-2 ml-11">
               <span className="text-xs text-gray-500">
-                {new Date(post.commentList[0].createdAt).toLocaleString()}
+                {formatRelativeTime(post.commentList[0].createdAt)}
               </span>
             </div>
           </div>
@@ -572,7 +573,7 @@ const Post = ({
                       </div>
                       <div className="flex items-center gap-4 mt-2 ml-3">
                         <span className="text-xs text-gray-500">
-                          {new Date(comment.createdAt).toLocaleString()}
+                          {formatRelativeTime(comment.createdAt)}
                         </span>
                       </div>
                     </div>

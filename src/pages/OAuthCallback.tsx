@@ -31,15 +31,15 @@ export default function OAuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-sm text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mb-4">
-          <span className="text-2xl font-bold text-white">M</span>
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-white border border-gray-200 rounded-2xl mb-4 shadow-sm">
+          <span className="text-2xl font-bold text-gray-900">M</span>
         </div>
         <h1 className="text-xl font-semibold text-gray-900 mb-2">Finishing sign-in…</h1>
         {error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : (
           <div className="flex items-center justify-center space-x-2 text-gray-600">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
             <span className="text-sm">Please wait</span>
           </div>
         )}
