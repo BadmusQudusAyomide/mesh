@@ -53,19 +53,20 @@ const Post = ({
   setCommentInput,
 }: PostProps) => (
   <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300">
-    <div className="flex items-start space-x-4 mb-4">
+    <div className="flex items-start gap-3 sm:gap-4 mb-4">
       <img
         src={post.avatar}
         alt={post.user}
         className="w-12 h-12 rounded-xl object-cover"
       />
-      <div className="flex-1">
-        <div className="flex items-center space-x-2">
-          <h4 className="font-semibold text-gray-800">{post.user}</h4>
-          {post.isVerified && <Crown className="w-4 h-4 text-yellow-500" />}
-          <span className="text-gray-500 text-sm">@{post.username}</span>
-          <span className="text-gray-400">•</span>
-          <span className="text-gray-500 text-sm">{post.time}</span>
+      <div className="min-w-0 flex-1">
+        <div className="min-w-0">
+          <h4 className="truncate text-base font-semibold text-gray-800 sm:text-lg" title={post.user}>{post.user}</h4>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500">
+            <span className="truncate max-w-full">@{post.username}</span>
+            <span className="hidden text-gray-300 sm:inline">&bull;</span>
+            <span className="whitespace-nowrap">{post.time}</span>
+          </div>
         </div>
         <p className="text-gray-700 mt-2 leading-relaxed">{post.content}</p>
       </div>

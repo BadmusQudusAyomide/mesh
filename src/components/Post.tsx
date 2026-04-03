@@ -238,8 +238,8 @@ const Post = ({
       <div id={`post-${post.id}`} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
         {/* Post Header */}
         <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
               <Link to={`/profile/${post.username}`} className="relative group" aria-label={`View ${post.user}'s profile`}>
                 <img
                   src={post.avatar}
@@ -250,34 +250,29 @@ const Post = ({
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </Link>
-              <div>
-                <div className="flex items-center gap-2">
-                  <Link to={`/profile/${post.username}`} className="font-bold text-gray-900 text-lg hover:underline">
+              <div className="min-w-0 flex-1">
+                <div className="min-w-0">
+                  <Link to={`/profile/${post.username}`} className="block truncate text-base font-bold text-gray-900 hover:underline sm:text-lg" title={post.user}>
                     {post.user}
                   </Link>
-                  {post.isVerified && (
-                    <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
+                  <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500">
+                    <span className="truncate max-w-full">@{post.username}</span>
+                    <span className="hidden text-gray-300 sm:inline">&bull;</span>
+                    <span className="whitespace-nowrap font-medium">{post.time}</span>
+                  </div>
                   {onFollow && userId && userId !== post.authorId && !isFollowing && (
                     <button
                       onClick={() => onFollow(post.authorId)}
-                      className="ml-3 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 bg-black text-white hover:bg-gray-800"
+                      className="mt-2 inline-flex w-fit items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-medium text-white transition-all duration-200 hover:bg-gray-800"
                     >
                       <UserPlusIcon className="w-4 h-4" />
                       Follow
                     </button>
                   )}
                 </div>
-                <div className="flex items-center space-x-3 text-sm text-gray-500">
-                  <span className="font-medium">{post.time}</span>
-                </div>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-all duration-200"
