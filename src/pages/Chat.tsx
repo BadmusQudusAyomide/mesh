@@ -167,6 +167,7 @@ function Chat() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputBarRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<null | {
@@ -816,6 +817,34 @@ function Chat() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Push input bar above the soft keyboard on mobile
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const bar = inputBarRef.current;
+      if (!bar) return;
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop
+      );
+      bar.style.bottom = `${keyboardHeight}px`;
+      if (keyboardHeight > 0 && isAtBottomRef.current) {
+        setTimeout(
+          () => messagesEndRef.current?.scrollIntoView({ behavior: "instant" }),
+          50
+        );
+      }
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    update();
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
     };
   }, []);
 
@@ -2169,9 +2198,7 @@ function Chat() {
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className={`flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth ${
-          isInputFocused ? "pb-40 sm:pb-28" : "pb-28"
-        } select-none`}
+        className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-1 scroll-smooth pb-28 select-none"
         style={{
           WebkitUserSelect: "none",
           userSelect: "none",
@@ -2263,7 +2290,7 @@ function Chat() {
                         <div
                           className={`px-3 py-2 shadow-md transition-all duration-200 select-none ${
                             item.isOwn
-                              ? `bg-gradient-to-r from-blue-500 to-purple-600 text-white ${
+                              ? `bg-blue-500 text-white ${
                                   msgIndex === 0
                                     ? "rounded-2xl rounded-br-md"
                                     : msgIndex === item.messages.length - 1
@@ -2820,7 +2847,7 @@ function Chat() {
       )}
 
       {/* Input Area */}
-      <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 relative sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)] shadow-lg">
+      <div ref={inputBarRef} className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 relative fixed bottom-0 left-0 right-0 z-10 pb-[env(safe-area-inset-bottom)] shadow-lg">
         {/* Reply Banner */}
         {replyToMessage && (
           <div className="px-3 sm:px-6 pt-2 animate-in slide-in-from-bottom duration-200">
@@ -3073,7 +3100,7 @@ function Chat() {
                   <button
                     onClick={handleSendMessage}
                     disabled={!isOnline && !editingMessageId}
-                    className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110 disabled:scale-100 disabled:cursor-not-allowed"
+                    className="p-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110 disabled:scale-100 disabled:cursor-not-allowed"
                   >
                     {editingMessageId ? (
                       <Edit3 className="w-5 h-5" />
