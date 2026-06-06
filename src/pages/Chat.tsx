@@ -1737,7 +1737,7 @@ function Chat() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="flex space-x-1">
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
@@ -1854,7 +1854,7 @@ function Chat() {
 
   if (!chatUser) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 mx-auto">
             <AlertCircle className="w-8 h-8 text-red-500" />
@@ -2216,7 +2216,7 @@ function Chat() {
         )}
         {messagesWithDates.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center animate-in fade-in duration-500">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6 shadow-lg">
+            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6 shadow-lg">
               <Smile className="w-12 h-12 text-blue-500" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
