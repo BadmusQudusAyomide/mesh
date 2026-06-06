@@ -25,7 +25,7 @@ import {
   Home,
   Building2,
   Phone,
-  
+  LogOut,
 } from "lucide-react";
 import { io as socketIOClient, Socket } from "socket.io-client";
 import PostsFeed from "../components/PostsFeed";
@@ -612,7 +612,7 @@ function EditProfile({ user, onClose, onSave }: EditProfileProps) {
 function Profile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user: currentUser, updateUser } = useAuth();
+  const { user: currentUser, updateUser, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState("posts");
   const [darkMode] = useState(false);
@@ -1036,12 +1036,25 @@ function Profile() {
           {currentUser &&
             profileUser &&
             currentUser._id === profileUser._id && (
-              <button
-                onClick={() => setShowEdit(true)}
-                className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all"
-              >
-                Edit Profile
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all"
+                >
+                  Edit Profile
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await logout();
+                    } catch {}
+                  }}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                  title="Log out"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             )}
         </div>
       </div>
