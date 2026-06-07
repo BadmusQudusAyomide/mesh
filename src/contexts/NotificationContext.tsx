@@ -38,6 +38,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
     // Socket.IO real-time notifications
     const socket = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
       transports: ["websocket", "polling"],
       withCredentials: true,
       reconnection: true,
@@ -48,7 +49,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     socketRef.current = socket;
     socket.on("connect", () => {
       console.log("[NotificationProvider] Socket connected:", socket.id);
-      if (user?._id) socket.emit("join", user._id);
+      socket.emit("join");
     });
     socket.on("disconnect", () => {
       console.log("[NotificationProvider] Socket disconnected");
@@ -56,7 +57,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     socket.on("connect_error", (err) => {
       console.error("[NotificationProvider] Socket connect_error:", err?.message || err, "URL:", SOCKET_URL);
     });
-    socket.emit("join", user._id);
+    socket.emit("join");
     console.log("[NotificationProvider] Emitted join for user:", user._id);
     socket.on("notification", (notification: Notification) => {
       console.log(

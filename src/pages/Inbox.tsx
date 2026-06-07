@@ -94,13 +94,14 @@ function Inbox() {
   useEffect(() => {
     if (!currentUser?._id) return;
     const socket = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
       transports: ["websocket"],
       withCredentials: true,
     });
     socketRef.current = socket;
-    socket.emit("join", currentUser._id);
+    socket.emit("join");
     socket.on("connect", () => {
-      socket.emit("join", currentUser._id);
+      socket.emit("join");
     });
     socket.on("connect_error", (err) => {
       console.error(

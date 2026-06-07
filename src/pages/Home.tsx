@@ -262,7 +262,9 @@ function Home() {
     fetchStories();
 
     // Socket.IO real-time updates
-    const socket: Socket = socketIOClient(SOCKET_URL);
+    const socket: Socket = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
+    });
     socket.on("postUpdated", (updatedPost: BackendPost) => {
       setPosts((prevPosts) =>
         prevPosts.map((post) =>

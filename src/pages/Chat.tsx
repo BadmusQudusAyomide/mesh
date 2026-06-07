@@ -178,7 +178,10 @@ function Chat() {
   // Minimal socket listeners to append incoming messages immediately
   useEffect(() => {
     if (socketRef.current) return; // initialize once
-    const s = socketIOClient(SOCKET_URL, { transports: ["websocket"] });
+    const s = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
+      transports: ["websocket"],
+    });
     socketRef.current = s;
     const onNew = (msg: any) => {
       // If the message is part of the current chat, append
@@ -1157,9 +1160,11 @@ function Chat() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const socket = socketIOClient(SOCKET_URL);
+    const socket = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
+    });
     socketRef.current = socket;
-    socket.emit("join", currentUser._id);
+    socket.emit("join");
 
     const handleNewMessage = (newMessage: Message) => {
       const me = currentUserIdRef.current;

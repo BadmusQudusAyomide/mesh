@@ -813,7 +813,9 @@ function Profile() {
     fetchProfile();
     const SOCKET_URL =
       import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
-    const socket: Socket = socketIOClient(SOCKET_URL);
+    const socket: Socket = socketIOClient(SOCKET_URL, {
+      auth: { token: apiService.getToken() },
+    });
     socket.on("postUpdated", (updatedPost: Post) => {
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
