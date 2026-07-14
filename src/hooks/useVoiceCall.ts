@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
+import { API_BASE_URL } from "../config";
+import { apiService } from "../lib/api";
 
 export type CallStatus =
   | "idle"
@@ -14,12 +16,34 @@ interface IncomingOffer {
   sdp: RTCSessionDescriptionInit;
 }
 
-const ICE_SERVERS: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ],
-};
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
+/**
+ * Fetches fresh TURN credentials from the backend (which proxies Xirsys so
+ * the secret never reaches the browser). Falls back to STUN-only if the
+ * request fails or TURN isn't configured yet.
+ */
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  try {
+    const token = apiService.getToken();
+    if (!token) return FALLBACK_ICE_SERVERS;
+    const response = await fetch(`${API_BASE_URL}/calls/ice-servers`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return FALLBACK_ICE_SERVERS;
+    const data = await response.json();
+    const iceServers = data?.iceServers;
+    if (!Array.isArray(iceServers) || iceServers.length === 0) {
+      return FALLBACK_ICE_SERVERS;
+    }
+    return iceServers;
+  } catch {
+    return FALLBACK_ICE_SERVERS;
+  }
+}
 
 /**
  * Mirrors the mobile app's CallService: a 1:1 audio-only WebRTC call, with
@@ -54,8 +78,9 @@ export function useVoiceCall(socket: Socket | null) {
   }, []);
 
   const createPeerConnection = useCallback(
-    (recipientId: string) => {
-      const pc = new RTCPeerConnection(ICE_SERVERS);
+    async (recipientId: string) => {
+      const iceServers = await fetchIceServers();
+      const pc = new RTCPeerConnection({ iceServers });
 
       pc.onicecandidate = (event) => {
         if (!event.candidate || !callIdRef.current) return;
@@ -99,7 +124,7 @@ export function useVoiceCall(socket: Socket | null) {
       });
       localStreamRef.current = stream;
 
-      const pc = createPeerConnection(recipientId);
+      const pc = await createPeerConnection(recipientId);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pcRef.current = pc;
 
@@ -127,7 +152,7 @@ export function useVoiceCall(socket: Socket | null) {
     });
     localStreamRef.current = stream;
 
-    const pc = createPeerConnection(offer.callerId);
+    const pc = await createPeerConnection(offer.callerId);
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
     pcRef.current = pc;
 
