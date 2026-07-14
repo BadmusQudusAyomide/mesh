@@ -47,9 +47,11 @@ export default function ForgotPassword() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-white rounded-xl shadow-sm border border-gray-200 mb-4">
-            <span className="text-xl font-bold text-gray-800">M</span>
-          </div>
+          <img
+            src="/mesh-logo.png"
+            alt="Mesh"
+            className="inline-block w-14 h-14 rounded-xl shadow-sm mb-4"
+          />
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">
             Reset your password
           </h1>

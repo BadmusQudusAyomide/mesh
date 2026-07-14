@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg', 'icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
@@ -42,15 +42,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#3b82f6',
+        background_color: '#0a0a0a',
+        theme_color: '#9333EA',
         icons: [
-          {
-            src: '/vite.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
-          },
           {
             src: '/icon-192x192.png',
             sizes: '192x192',

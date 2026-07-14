@@ -5,7 +5,6 @@ import {
   Mail,
   User,
   Users,
-  Zap,
   Sun,
   Moon,
   LogOut,
@@ -167,9 +166,7 @@ const Navigation = ({
       <nav className="hidden md:block fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/70 backdrop-blur-lg border border-gray-200/50 rounded-xl shadow-sm px-5 py-2.5">
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-gray-200">
-              <Zap className="w-4 h-4 text-gray-800" />
-            </div>
+            <img src="/mesh-logo.png" alt="Mesh" className="w-7 h-7 rounded-lg" />
             <span className="text-lg font-semibold text-gray-900">Mesh</span>
           </div>
           <div className="flex items-center space-x-4">
