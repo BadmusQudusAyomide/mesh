@@ -38,6 +38,8 @@ import {
 import { Square } from "lucide-react";
 // Icons for custom audio player
 import { Play, Pause } from "lucide-react";
+import { useVoiceCall } from "../hooks/useVoiceCall";
+import CallOverlay from "../components/CallOverlay";
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL || API_BASE_URL.replace(/\/api.*/, "");
@@ -169,11 +171,16 @@ function Chat() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<ReturnType<typeof socketIOClient> | null>(null);
+  const [activeSocket, setActiveSocket] = useState<ReturnType<
+    typeof socketIOClient
+  > | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<null | {
     url: string;
     type: "image" | "video";
   }>(null);
+
+  const call = useVoiceCall(activeSocket);
 
   // Minimal socket listeners to append incoming messages immediately
   useEffect(() => {
@@ -1164,6 +1171,7 @@ function Chat() {
       auth: { token: apiService.getToken() },
     });
     socketRef.current = socket;
+    setActiveSocket(socket);
     socket.emit("join");
 
     const handleNewMessage = (newMessage: Message) => {
@@ -1282,6 +1290,7 @@ function Chat() {
       socket.off("messageReaction", handleReaction);
       socket.disconnect();
       socketRef.current = null;
+      setActiveSocket(null);
       if (typingTimeoutRef.current)
         window.clearTimeout(typingTimeoutRef.current);
     };
@@ -1936,7 +1945,10 @@ function Chat() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
-          <button className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
+          <button
+            onClick={() => chatUser && call.startOutgoingCall(chatUser._id)}
+            className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
+          >
             <Phone className="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:scale-110 transition-all" />
           </button>
           <button className="p-2 sm:p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
@@ -2807,6 +2819,18 @@ function Chat() {
           </div>
         </>
       )}
+
+      {/* Voice call overlay */}
+      <CallOverlay
+        status={call.status}
+        peerName={chatUser?.fullName || "Mesh user"}
+        peerAvatar={chatUser?.avatar}
+        isMuted={call.isMuted}
+        onAccept={call.acceptIncomingCall}
+        onDecline={call.declineIncomingCall}
+        onHangUp={call.hangUp}
+        onToggleMute={call.toggleMute}
+      />
 
       {/* Media Viewer Modal */}
       {viewer && (
